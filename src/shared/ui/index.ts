@@ -9,18 +9,29 @@ export { Chip, type ChipProps } from './Chip';
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { InitialBadge, type InitialBadgeProps } from './InitialBadge';
 export { Input, type InputProps, type InputStatus } from './Input';
+export { MenuRow, type MenuRowProps } from './MenuRow';
 export {
   ArrowLeftIcon,
   CameraIcon,
   CelebrateIcon,
   CheckCircleIcon,
   CheckIcon,
+  ChevronRightIcon,
+  HeartDetailIcon,
   HeartFillIcon,
   HeartLineIcon,
+  HelpIcon,
+  LogoutIcon,
+  PencilIcon,
   PlusIcon,
+  ReportIcon,
   SearchIcon,
+  SettingsIcon,
+  SpeakerIcon,
   WarningIcon,
+  WithdrawIcon,
 } from './icons';
 export { Modal, type ModalProps } from './Modal';
 export { OtpInput, type OtpInputProps } from './OtpInput';

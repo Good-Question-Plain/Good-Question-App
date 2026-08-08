@@ -29,6 +29,7 @@ const palette = {
   // 아래 넷은 Variable 로 등록돼 있지 않고 디자인에 하드코딩돼 있던 값이다.
   // 모두 Bootstrap gray 스케일과 같은 계열이라 해당 자리에 맞춰 넣었다.
   // 디자이너가 나중에 Variable 로 승격하면 이름만 맞추면 된다.
+  neutral100: '#F1F3F5',
   neutral200: '#E9ECEF',
   neutral600: '#868E96',
   neutral700: '#495057',
@@ -74,6 +75,8 @@ export const colors = {
   border: palette.neutral300,
   borderStrong: palette.neutral400,
   divider: palette.neutral300,
+  /** 목록 안 줄 구분선. 카드 테두리보다 한 단계 옅다. */
+  dividerSubtle: palette.neutral100,
 
   // 브랜드 / 주요 액션
   primary: palette.primary500,

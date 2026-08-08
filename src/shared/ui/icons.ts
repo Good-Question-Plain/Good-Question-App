@@ -17,6 +17,15 @@ export { default as CameraIcon } from '@assets/icons/camera.svg';
 export { default as PlusIcon } from '@assets/icons/plus.svg';
 export { default as ArrowLeftIcon } from '@assets/icons/arrow-left.svg';
 export { default as SearchIcon } from '@assets/icons/search.svg';
+export { default as SpeakerIcon } from '@assets/icons/speaker.svg';
+export { default as HeartDetailIcon } from '@assets/icons/heart-detail.svg';
+export { default as PencilIcon } from '@assets/icons/pencil.svg';
+export { default as ChevronRightIcon } from '@assets/icons/chevron-right.svg';
+export { default as ReportIcon } from '@assets/icons/report.svg';
+export { default as SettingsIcon } from '@assets/icons/settings.svg';
+export { default as HelpIcon } from '@assets/icons/help.svg';
+export { default as LogoutIcon } from '@assets/icons/logout.svg';
+export { default as WithdrawIcon } from '@assets/icons/withdraw.svg';
 export { default as HeartFillIcon } from '@assets/icons/heart-fill.svg';
 export { default as HeartLineIcon } from '@assets/icons/heart-line.svg';
 

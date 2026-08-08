@@ -1,2 +1,3 @@
 export { WordbookScreen } from './screens/WordbookScreen';
-export type { WordEntry } from './model/types';
+export { WordDetailScreen } from './screens/WordDetailScreen';
+export type { WordEntry, WordGroup } from './model/types';

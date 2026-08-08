@@ -29,6 +29,8 @@ export const typography = {
   title: { fontFamily: fontFamily.bold, fontSize: 28, lineHeight: 38 },
   /** 로고 아래 서브카피 — 24/SemiBold */
   subtitle: { fontFamily: fontFamily.semiBold, fontSize: 24, lineHeight: 26 },
+  /** 단어 상세의 소제목 — 20/SemiBold */
+  subheading: { fontFamily: fontFamily.semiBold, fontSize: 20, lineHeight: 28 },
   /** 섹션/모달 제목 — 17/SemiBold */
   heading: { fontFamily: fontFamily.semiBold, fontSize: 17, lineHeight: 24 },
   /** 입력 라벨 — 16/SemiBold, 자간 0.1 */
@@ -43,6 +45,8 @@ export const typography = {
   display: { fontFamily: fontFamily.bold, fontSize: 32, lineHeight: 42 },
   /** 단어장 카드의 단어 — 24/Bold */
   word: { fontFamily: fontFamily.bold, fontSize: 24, lineHeight: 32 },
+  /** 원형 뱃지 안 글자(큰 것) — 14/Bold */
+  badgeLarge: { fontFamily: fontFamily.bold, fontSize: 14, lineHeight: 18 },
   /** 원형 뱃지 안 글자 — 12/Bold */
   badge: { fontFamily: fontFamily.bold, fontSize: 12, lineHeight: 16 },
   /** 카테고리 칩 — 13/SemiBold */

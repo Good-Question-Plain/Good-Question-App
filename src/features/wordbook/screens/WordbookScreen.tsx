@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -12,8 +13,9 @@ import {
   Text,
 } from '@/shared/ui';
 
+import { StoryWordGroup } from '../components/StoryWordGroup';
 import { WordCard } from '../components/WordCard';
-import { MOCK_WORDS, type WordEntry } from '../model/types';
+import { groupByStory, MOCK_WORDS, type WordEntry } from '../model/types';
 
 const FILTERS = ['전체', '이야기별'] as const;
 type Filter = (typeof FILTERS)[number];
@@ -36,6 +38,7 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
  * '이야기별'은 같은 이야기에서 나온 단어를 묶어 보여주는 필터다.
  */
 export function WordbookScreen(): React.JSX.Element {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>('전체');
   const [words, setWords] = useState<readonly WordEntry[]>(MOCK_WORDS);
 
@@ -45,13 +48,13 @@ export function WordbookScreen(): React.JSX.Element {
     );
   };
 
-  // '이야기별'은 같은 이야기끼리 붙여 보여준다. 실제 그룹 헤더는 API 스펙이
-  // 정해지면 붙이고, 지금은 정렬만으로 묶음을 흉내낸다.
-  const ordered =
-    filter === '이야기별'
-      ? [...words].sort((a, b) => a.storyTitle.localeCompare(b.storyTitle))
-      : words;
-  const rows = chunk(ordered, COLUMNS);
+  const groups = groupByStory(words);
+  const rows = chunk(words, COLUMNS);
+  const isEmpty = words.length === 0;
+
+  const openDetail = (id: string): void => {
+    router.push({ pathname: '/word/[id]', params: { id } });
+  };
 
   return (
     <Screen>
@@ -74,31 +77,46 @@ export function WordbookScreen(): React.JSX.Element {
           <SegmentedTabs items={FILTERS} value={filter} onChange={setFilter} />
         </Appear>
 
-        {ordered.length === 0 ? (
+        {isEmpty ? (
           <EmptyState
             title="아직 저장한 단어가 없어요"
             description="이야기를 하면서 모르는 단어를 저장해봐요"
           />
         ) : (
           <ScrollView contentContainerStyle={styles.listScroll}>
-            <Appear delay={80} style={styles.grid}>
-              {rows.map((row, rowIndex) => (
-                <View key={rowIndex} style={styles.row}>
-                  {row.map((entry) => (
-                    <WordCard
-                      key={entry.id}
-                      entry={entry}
-                      onToggleSave={() => toggleSave(entry.id)}
-                      style={styles.cell}
-                    />
-                  ))}
-                  {row.length < COLUMNS &&
-                    Array.from({ length: COLUMNS - row.length }, (_, index) => (
-                      <View key={`filler-${index}`} style={styles.cell} />
+            {filter === '전체' ? (
+              <Appear delay={80} style={styles.grid}>
+                {rows.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.row}>
+                    {row.map((entry) => (
+                      <WordCard
+                        key={entry.id}
+                        entry={entry}
+                        onToggleSave={() => toggleSave(entry.id)}
+                        onPress={() => openDetail(entry.id)}
+                        style={styles.cell}
+                      />
                     ))}
-                </View>
-              ))}
-            </Appear>
+                    {row.length < COLUMNS &&
+                      Array.from({ length: COLUMNS - row.length }, (_, index) => (
+                        <View key={`filler-${index}`} style={styles.cell} />
+                      ))}
+                  </View>
+                ))}
+              </Appear>
+            ) : (
+              <Appear delay={80} style={styles.groups}>
+                {groups.map((group, index) => (
+                  <StoryWordGroup
+                    key={group.storyTitle}
+                    group={group}
+                    tintIndex={index}
+                    defaultOpen={index === 0}
+                    onSelectWord={openDetail}
+                  />
+                ))}
+              </Appear>
+            )}
           </ScrollView>
         )}
       </View>
@@ -122,6 +140,9 @@ const styles = StyleSheet.create({
   },
   grid: {
     gap: spacing.xl,
+  },
+  groups: {
+    gap: spacing.lg,
   },
   row: {
     flexDirection: 'row',

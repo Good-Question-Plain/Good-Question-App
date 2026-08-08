@@ -8,5 +8,11 @@ import { MOCK_CHILDREN } from '@/features/child';
  * 아이 목록을 넘겨 조립한다. 실제 API 가 붙으면 이 자리가 조회 훅으로 바뀐다.
  */
 export default function MypageRoute(): React.JSX.Element {
-  return <MypageScreen profiles={MOCK_CHILDREN} />;
+  return (
+    <MypageScreen
+      parentName="김보호"
+      parentEmail="parent@email.com"
+      childProfiles={MOCK_CHILDREN}
+    />
+  );
 }

@@ -2,39 +2,92 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { spacing } from '@/shared/theme';
-import { Appear, Button, Card, findAvatar, PressableScale, Screen, Text } from '@/shared/ui';
+import { colors, radius, spacing } from '@/shared/theme';
+import {
+  Appear,
+  HelpIcon,
+  LogoutIcon,
+  MenuRow,
+  PlusIcon,
+  PressableScale,
+  ReportIcon,
+  Screen,
+  SettingsIcon,
+  Text,
+  WithdrawIcon,
+} from '@/shared/ui';
 
-import { ChildProfileModal, type ChildProfileSummary } from '../components/ChildProfileModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ParentGateModal } from '../components/ParentGateModal';
+import { ProfileCard } from '../components/ProfileCard';
 import { WithdrawModal } from '../components/WithdrawModal';
 
-type OpenModal = 'profile' | 'logout' | 'withdraw' | null;
+type OpenModal = 'logout' | 'withdraw' | 'parentGate' | null;
+
+/** 보호자 확인이 필요한 메뉴. 아이가 혼자 눌러도 넘어가지 않게 막는다. */
+type GatedTarget = 'report' | 'account';
+
+/** 디자인 실측: 아이 카드가 한 줄에 3칸. */
+const CHILD_COLUMNS = 3;
+
+type ChildCell = { kind: 'child'; child: MypageChild; index: number } | { kind: 'add' };
+
+export interface MypageChild {
+  id: string;
+  name: string;
+  age: number;
+}
 
 export interface MypageScreenProps {
+  parentName: string;
+  parentEmail: string;
   /**
    * 보호자에게 등록된 아이 목록.
    *
    * account feature 가 child feature 를 직접 가져오지 않도록 라우트에서 받아온다.
    * (feature 끼리 의존하면 순환 참조가 생긴다 — src/features/README.md 참고)
    */
-  profiles: readonly ChildProfileSummary[];
+  childProfiles: readonly MypageChild[];
 }
 
 /**
- * 마이페이지.
+ * 마이페이지 (Figma 118:291).
  *
- * 화면 자체는 아직 디자인이 없어 최소 구성으로 두고, 디자인이 나와 있는
- * 모달 3개(아이 프로필 전환 / 로그아웃 / 회원탈퇴)를 붙여둔다.
- * 디자인이 오면 이 화면의 본문만 갈아끼우면 된다.
+ * 보호자 카드 → 우리 아이들 → 설정 메뉴 순서. 아이가 쓰는 태블릿에 그대로 열려
+ * 있는 화면이라, 리포트와 계정 설정은 보호자 확인을 거친 뒤에만 들어간다.
  */
-export function MypageScreen({ profiles }: MypageScreenProps): React.JSX.Element {
+export function MypageScreen({
+  parentName,
+  parentEmail,
+  childProfiles,
+}: MypageScreenProps): React.JSX.Element {
   const router = useRouter();
   const [openModal, setOpenModal] = useState<OpenModal>(null);
-  const [activeChildId, setActiveChildId] = useState<string | null>(profiles[0]?.id ?? null);
+  const [, setGatedTarget] = useState<GatedTarget | null>(null);
 
-  const activeChild = profiles.find((child) => child.id === activeChildId);
   const close = (): void => setOpenModal(null);
+
+  // 아이 카드 + "추가하기" 를 한 줄 3칸으로 끊는다. flexWrap 에 맡기면 마지막
+  // 줄에 혼자 남은 카드가 가로를 다 차지해 다른 카드와 폭이 달라진다.
+  const cells: ChildCell[] = [
+    ...childProfiles.map((child, index) => ({ kind: 'child' as const, child, index })),
+    { kind: 'add' as const },
+  ];
+  const childRows: ChildCell[][] = [];
+  for (let i = 0; i < cells.length; i += CHILD_COLUMNS) {
+    childRows.push(cells.slice(i, i + CHILD_COLUMNS));
+  }
+
+  const requestGated = (target: GatedTarget): void => {
+    setGatedTarget(target);
+    setOpenModal('parentGate');
+  };
+
+  const handleGatePassed = (): void => {
+    close();
+    // TODO: 리포트 / 계정 설정 화면 연결 (디자인 준비 중)
+    setGatedTarget(null);
+  };
 
   return (
     <Screen scrollable>
@@ -44,47 +97,100 @@ export function MypageScreen({ profiles }: MypageScreenProps): React.JSX.Element
         </Appear>
 
         <Appear delay={40}>
-          <Card flat>
-            <Text variant="heading">지금 사용 중인 아이</Text>
-            <PressableScale
-              accessibilityRole="button"
-              onPress={() => setOpenModal('profile')}
-              style={styles.childRow}
-            >
-              {activeChild !== undefined && (
-                <>
-                  {(() => {
-                    const { Icon } = findAvatar(activeChild.avatarId);
-                    return <Icon width={48} height={48} />;
-                  })()}
-                  <Text variant="label" numberOfLines={1} style={styles.childName}>
-                    {activeChild.name}
-                  </Text>
-                </>
-              )}
-              <Text variant="caption" color="primaryText" style={styles.changeLabel}>
-                바꾸기
-              </Text>
-            </PressableScale>
-          </Card>
+          <ProfileCard
+            variant="parent"
+            name={parentName}
+            caption={parentEmail}
+            onEdit={() => requestGated('account')}
+          />
         </Appear>
 
-        <Appear delay={80} style={styles.actions}>
-          <Button label="로그아웃" variant="secondary" onPress={() => setOpenModal('logout')} />
-          <Button label="회원탈퇴" variant="ghost" onPress={() => setOpenModal('withdraw')} />
+        <Appear delay={80} style={styles.section}>
+          <Text variant="captionStrong">우리 아이들</Text>
+          {childRows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.childRow}>
+              {row.map((item) =>
+                item.kind === 'child' ? (
+                  <ProfileCard
+                    key={item.child.id}
+                    name={item.child.name}
+                    caption={`${item.child.age}세`}
+                    tintIndex={item.index}
+                    onEdit={() => router.push('/child/create')}
+                    style={styles.childCell}
+                  />
+                ) : (
+                  <PressableScale
+                    key="add"
+                    accessibilityRole="button"
+                    accessibilityLabel="아이 추가하기"
+                    onPress={() => router.push('/child/create')}
+                    scaleTo={0.985}
+                    style={[styles.childCell, styles.addCard]}
+                  >
+                    <PlusIcon width={18} height={18} color={colors.textSubtle} />
+                    <Text variant="captionSmall" color="textSubtle">
+                      아이 추가하기
+                    </Text>
+                  </PressableScale>
+                ),
+              )}
+              {/* 마지막 줄이 덜 찼을 때 카드가 늘어나지 않도록 빈 칸을 채운다. */}
+              {row.length < CHILD_COLUMNS &&
+                Array.from({ length: CHILD_COLUMNS - row.length }, (_, i) => (
+                  <View key={`filler-${i}`} style={styles.childCell} />
+                ))}
+            </View>
+          ))}
+        </Appear>
+
+        <Appear delay={120} style={styles.menu}>
+          <MenuRow
+            label="학습 리포트 보기"
+            Icon={ReportIcon}
+            tone="textStrong"
+            showChevron
+            onPress={() => requestGated('report')}
+          />
+          <MenuRow
+            label="계정 설정"
+            Icon={SettingsIcon}
+            tone="textStrong"
+            showChevron
+            onPress={() => requestGated('account')}
+          />
+          <MenuRow
+            label="도움말"
+            Icon={HelpIcon}
+            tone="textStrong"
+            showChevron
+            onPress={() => {
+              // TODO: 도움말 화면 연결 (디자인 준비 중)
+            }}
+          />
+          <MenuRow
+            label="로그아웃"
+            Icon={LogoutIcon}
+            tone="timer"
+            onPress={() => setOpenModal('logout')}
+          />
+          <MenuRow
+            label="회원탈퇴"
+            Icon={WithdrawIcon}
+            tone="danger"
+            last
+            onPress={() => setOpenModal('withdraw')}
+          />
         </Appear>
       </View>
 
-      <ChildProfileModal
-        visible={openModal === 'profile'}
-        profiles={profiles}
-        activeId={activeChildId}
-        onSelect={setActiveChildId}
-        onAdd={() => {
+      <ParentGateModal
+        visible={openModal === 'parentGate'}
+        onConfirm={handleGatePassed}
+        onCancel={() => {
           close();
-          router.push('/child/create');
+          setGatedTarget(null);
         }}
-        onClose={close}
       />
 
       <ConfirmModal
@@ -119,21 +225,31 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     paddingTop: spacing['3xl'],
   },
+  section: {
+    gap: spacing.lg,
+  },
   childRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.lg,
+    gap: spacing.xl,
   },
-  // 이름이 길어도 "바꾸기"를 밀어내지 않도록 남는 공간만 차지하고 잘린다.
-  childName: {
+  childCell: {
     flex: 1,
   },
-  changeLabel: {
-    marginLeft: spacing.lg,
-  },
-  actions: {
+  addCard: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    height: 66, // 디자인 실측
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: radius.md,
+    borderColor: colors.borderStrong,
+  },
+  menu: {
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    borderColor: colors.surfaceMuted,
   },
 });

@@ -45,3 +45,4 @@ yarn-error.*
 # 로컬 빌드 로그
 build.log
 web.log
+metro.log
