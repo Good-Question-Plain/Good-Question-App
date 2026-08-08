@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Background">
+<rect width="30" height="30" rx="15" fill="#FEE500"/>
+<path id="Path" fill-rule="evenodd" clip-rule="evenodd" d="M15 7C10.5815 7 7 9.96472 7 13.6212C7 15.8953 8.38525 17.9 10.4947 19.0923L9.60715 22.5662C9.52873 22.8731 9.85638 23.1178 10.108 22.9399L13.9986 20.1888C14.3269 20.2227 14.6605 20.2425 15 20.2425C19.4182 20.2425 23 17.2779 23 13.6212C23 9.96472 19.4182 7 15 7Z" fill="black"/>
+</g>
+</svg>
