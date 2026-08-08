@@ -15,6 +15,10 @@ export { default as WarningIcon } from '@assets/icons/warning.svg';
 export { default as CelebrateIcon } from '@assets/icons/celebrate.svg';
 export { default as CameraIcon } from '@assets/icons/camera.svg';
 export { default as PlusIcon } from '@assets/icons/plus.svg';
+export { default as ArrowLeftIcon } from '@assets/icons/arrow-left.svg';
+export { default as SearchIcon } from '@assets/icons/search.svg';
+export { default as HeartFillIcon } from '@assets/icons/heart-fill.svg';
+export { default as HeartLineIcon } from '@assets/icons/heart-line.svg';
 
 export { default as TabHomeIcon } from '@assets/icons/tab-home.svg';
 export { default as TabStoryIcon } from '@assets/icons/tab-story.svg';

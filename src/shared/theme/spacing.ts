@@ -22,6 +22,8 @@ export const spacing = {
 /** 모서리 반경. 값은 전부 디자인 실측. */
 export const radius = {
   none: 0,
+  /** 카드 안 작은 태그 */
+  xs: 6,
   /** 정보 블록, 모달 하단 버튼 */
   sm: 10,
   /** 인풋, 기본 버튼, 모달 컨테이너 */

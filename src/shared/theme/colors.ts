@@ -41,6 +41,11 @@ const palette = {
   /** 인증코드 남은 시간 표시. Variable 미등록. */
   warning500: '#F59E0B',
 
+  // 살구빛 계열. primary 스케일과 색상(hue)이 달라 따로 둔다.
+  // 이야기 카드 썸네일과 상세 화면 안내 블록 배경에 쓰인다. Variable 미등록.
+  peach50: '#FFF8F0',
+  peach150: '#FFE4CC',
+
   // 소셜 로그인 브랜드
   kakaoLogo: '#000000',
 } as const;
@@ -51,6 +56,8 @@ export const colors = {
   surface: palette.neutral0,
   /** 카드/패널용 은은한 주황 배경 (로그인 폼 컨테이너 등) */
   surfaceAccent: palette.primary50,
+  /** 상세 화면의 안내 블록처럼 따뜻한 톤의 옅은 배경 */
+  surfaceAccentWarm: palette.peach50,
   /** 눌림 상태·보조 버튼·정보 블록 배경 */
   surfaceMuted: palette.neutral200,
 
@@ -79,6 +86,8 @@ export const colors = {
   primaryText: palette.primary600,
   /** 축하 화면 제목처럼 더 진한 브랜드 텍스트 */
   primaryTextDeep: palette.primary700,
+  /** 선택 가능한 칩·아바타의 옅은 주황 배경 */
+  primarySelected: palette.primary150,
   /** 장식용 점 (회원가입 완료 화면) */
   decorLight: palette.primary200,
   decorMid: palette.primary250,
@@ -110,3 +119,15 @@ export type ColorToken = keyof typeof colors;
  * `Text` 의 `color` prop 같은 토큰 참조가 타입으로 보장된다.
  */
 export const avatarTints = [palette.primary150, palette.primary200, palette.primary250] as const;
+
+/**
+ * 이야기 카드 썸네일 배경. 목록에서 카드마다 돌아가며 쓴다.
+ * 값과 순서 모두 디자인(125:115) 실측.
+ */
+export const storyTints = [
+  palette.primary150,
+  palette.primary200,
+  palette.primary250,
+  palette.peach150,
+  palette.peach50,
+] as const;

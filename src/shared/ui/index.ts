@@ -5,20 +5,27 @@ export { AVATARS, findAvatar, type AvatarDef, type AvatarId } from './avatars';
 export { BottomTabBar, TABS, type BottomTabBarProps, type TabKey } from './BottomTabBar';
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
+export { Chip, type ChipProps } from './Chip';
+export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
 export { Input, type InputProps, type InputStatus } from './Input';
 export {
+  ArrowLeftIcon,
   CameraIcon,
   CelebrateIcon,
   CheckCircleIcon,
   CheckIcon,
+  HeartFillIcon,
+  HeartLineIcon,
   PlusIcon,
+  SearchIcon,
   WarningIcon,
 } from './icons';
 export { Modal, type ModalProps } from './Modal';
 export { OtpInput, type OtpInputProps } from './OtpInput';
 export { PressableScale, type PressableScaleProps } from './PressableScale';
 export { Screen, type ScreenProps } from './Screen';
+export { SegmentedTabs, type SegmentedTabsProps } from './SegmentedTabs';
 export { SocialButton, type SocialButtonProps, type SocialProvider } from './SocialButton';
 export { StepIndicator, type StepIndicatorProps } from './StepIndicator';
 export { Text, type TextProps } from './Text';

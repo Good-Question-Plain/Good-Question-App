@@ -18,7 +18,8 @@ export function SelectChildScreen(): React.JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(MOCK_CHILDREN[0]?.id ?? null);
 
   const handleStart = (): void => {
-    // TODO: 선택한 아이를 활성 프로필로 저장한 뒤 홈으로
+    // TODO: 선택한 아이를 활성 프로필로 저장
+    router.replace('/story');
   };
 
   return (
