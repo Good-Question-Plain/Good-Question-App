@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/shared/theme';
-import { Appear, Chip, Screen, Text } from '@/shared/ui';
+import { Appear, Chip, EmptyState, Screen, Text } from '@/shared/ui';
 
 import { StoryCard } from '../components/StoryCard';
 import { MOCK_STORIES, STORY_CATEGORIES, type Story, type StoryCategory } from '../model/types';
@@ -66,30 +66,37 @@ export function StoryListScreen(): React.JSX.Element {
           </ScrollView>
         </Appear>
 
-        <ScrollView contentContainerStyle={styles.gridScroll}>
-          <Appear delay={80} style={styles.grid}>
-            {rows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.row}>
-                {row.map((story, columnIndex) => (
-                  <StoryCard
-                    key={story.id}
-                    story={story}
-                    tintIndex={rowIndex * COLUMNS + columnIndex}
-                    onPress={() =>
-                      router.push({ pathname: '/story/[id]', params: { id: story.id } })
-                    }
-                    style={styles.cell}
-                  />
-                ))}
-                {/* 마지막 줄이 덜 찼을 때 카드가 늘어나지 않도록 빈 칸을 채운다. */}
-                {row.length < COLUMNS &&
-                  Array.from({ length: COLUMNS - row.length }, (_, index) => (
-                    <View key={`filler-${index}`} style={styles.cell} />
+        {stories.length === 0 ? (
+          <EmptyState
+            title="아직 이야기가 없어요"
+            description={`'${category}' 이야기는 곧 찾아올 거예요`}
+          />
+        ) : (
+          <ScrollView contentContainerStyle={styles.gridScroll}>
+            <Appear delay={80} style={styles.grid}>
+              {rows.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.row}>
+                  {row.map((story, columnIndex) => (
+                    <StoryCard
+                      key={story.id}
+                      story={story}
+                      tintIndex={rowIndex * COLUMNS + columnIndex}
+                      onPress={() =>
+                        router.push({ pathname: '/story/[id]', params: { id: story.id } })
+                      }
+                      style={styles.cell}
+                    />
                   ))}
-              </View>
-            ))}
-          </Appear>
-        </ScrollView>
+                  {/* 마지막 줄이 덜 찼을 때 카드가 늘어나지 않도록 빈 칸을 채운다. */}
+                  {row.length < COLUMNS &&
+                    Array.from({ length: COLUMNS - row.length }, (_, index) => (
+                      <View key={`filler-${index}`} style={styles.cell} />
+                    ))}
+                </View>
+              ))}
+            </Appear>
+          </ScrollView>
+        )}
       </View>
     </Screen>
   );

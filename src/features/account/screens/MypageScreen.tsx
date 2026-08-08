@@ -2,15 +2,24 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { MOCK_CHILDREN } from '@/features/child';
 import { spacing } from '@/shared/theme';
 import { Appear, Button, Card, findAvatar, PressableScale, Screen, Text } from '@/shared/ui';
 
-import { ChildProfileModal } from '../components/ChildProfileModal';
+import { ChildProfileModal, type ChildProfileSummary } from '../components/ChildProfileModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { WithdrawModal } from '../components/WithdrawModal';
 
 type OpenModal = 'profile' | 'logout' | 'withdraw' | null;
+
+export interface MypageScreenProps {
+  /**
+   * 보호자에게 등록된 아이 목록.
+   *
+   * account feature 가 child feature 를 직접 가져오지 않도록 라우트에서 받아온다.
+   * (feature 끼리 의존하면 순환 참조가 생긴다 — src/features/README.md 참고)
+   */
+  profiles: readonly ChildProfileSummary[];
+}
 
 /**
  * 마이페이지.
@@ -19,12 +28,12 @@ type OpenModal = 'profile' | 'logout' | 'withdraw' | null;
  * 모달 3개(아이 프로필 전환 / 로그아웃 / 회원탈퇴)를 붙여둔다.
  * 디자인이 오면 이 화면의 본문만 갈아끼우면 된다.
  */
-export function MypageScreen(): React.JSX.Element {
+export function MypageScreen({ profiles }: MypageScreenProps): React.JSX.Element {
   const router = useRouter();
   const [openModal, setOpenModal] = useState<OpenModal>(null);
-  const [activeChildId, setActiveChildId] = useState<string | null>(MOCK_CHILDREN[0]?.id ?? null);
+  const [activeChildId, setActiveChildId] = useState<string | null>(profiles[0]?.id ?? null);
 
-  const activeChild = MOCK_CHILDREN.find((child) => child.id === activeChildId);
+  const activeChild = profiles.find((child) => child.id === activeChildId);
   const close = (): void => setOpenModal(null);
 
   return (
@@ -48,7 +57,9 @@ export function MypageScreen(): React.JSX.Element {
                     const { Icon } = findAvatar(activeChild.avatarId);
                     return <Icon width={48} height={48} />;
                   })()}
-                  <Text variant="label">{activeChild.name}</Text>
+                  <Text variant="label" numberOfLines={1} style={styles.childName}>
+                    {activeChild.name}
+                  </Text>
                 </>
               )}
               <Text variant="caption" color="primaryText" style={styles.changeLabel}>
@@ -66,7 +77,7 @@ export function MypageScreen(): React.JSX.Element {
 
       <ChildProfileModal
         visible={openModal === 'profile'}
-        profiles={MOCK_CHILDREN}
+        profiles={profiles}
         activeId={activeChildId}
         onSelect={setActiveChildId}
         onAdd={() => {
@@ -114,8 +125,12 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     marginTop: spacing.lg,
   },
+  // 이름이 길어도 "바꾸기"를 밀어내지 않도록 남는 공간만 차지하고 잘린다.
+  childName: {
+    flex: 1,
+  },
   changeLabel: {
-    marginLeft: 'auto',
+    marginLeft: spacing.lg,
   },
   actions: {
     flexDirection: 'row',

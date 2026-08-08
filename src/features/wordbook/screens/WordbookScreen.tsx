@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { colors, spacing } from '@/shared/theme';
-import { Appear, PressableScale, Screen, SearchIcon, SegmentedTabs, Text } from '@/shared/ui';
+import { colors, hitSlopFor, spacing } from '@/shared/theme';
+import {
+  Appear,
+  EmptyState,
+  PressableScale,
+  Screen,
+  SearchIcon,
+  SegmentedTabs,
+  Text,
+} from '@/shared/ui';
 
 import { WordCard } from '../components/WordCard';
 import { MOCK_WORDS, type WordEntry } from '../model/types';
@@ -51,7 +59,12 @@ export function WordbookScreen(): React.JSX.Element {
         <Appear>
           <View style={styles.header}>
             <Text variant="title">단어장</Text>
-            <PressableScale accessibilityRole="button" accessibilityLabel="검색" scaleTo={0.88}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="검색"
+              scaleTo={0.88}
+              hitSlop={hitSlopFor(24)}
+            >
               <SearchIcon width={24} height={24} color={colors.textStrong} />
             </PressableScale>
           </View>
@@ -61,26 +74,33 @@ export function WordbookScreen(): React.JSX.Element {
           <SegmentedTabs items={FILTERS} value={filter} onChange={setFilter} />
         </Appear>
 
-        <ScrollView contentContainerStyle={styles.listScroll}>
-          <Appear delay={80} style={styles.grid}>
-            {rows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.row}>
-                {row.map((entry) => (
-                  <WordCard
-                    key={entry.id}
-                    entry={entry}
-                    onToggleSave={() => toggleSave(entry.id)}
-                    style={styles.cell}
-                  />
-                ))}
-                {row.length < COLUMNS &&
-                  Array.from({ length: COLUMNS - row.length }, (_, index) => (
-                    <View key={`filler-${index}`} style={styles.cell} />
+        {ordered.length === 0 ? (
+          <EmptyState
+            title="아직 저장한 단어가 없어요"
+            description="이야기를 하면서 모르는 단어를 저장해봐요"
+          />
+        ) : (
+          <ScrollView contentContainerStyle={styles.listScroll}>
+            <Appear delay={80} style={styles.grid}>
+              {rows.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.row}>
+                  {row.map((entry) => (
+                    <WordCard
+                      key={entry.id}
+                      entry={entry}
+                      onToggleSave={() => toggleSave(entry.id)}
+                      style={styles.cell}
+                    />
                   ))}
-              </View>
-            ))}
-          </Appear>
-        </ScrollView>
+                  {row.length < COLUMNS &&
+                    Array.from({ length: COLUMNS - row.length }, (_, index) => (
+                      <View key={`filler-${index}`} style={styles.cell} />
+                    ))}
+                </View>
+              ))}
+            </Appear>
+          </ScrollView>
+        )}
       </View>
     </Screen>
   );

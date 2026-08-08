@@ -87,6 +87,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    // 보호자 한 계정에 아이를 여러 명 등록할 수 있다(PRD 5.1).
+    // 7명이 넘으면 한 줄에 다 못 들어가므로 줄바꿈시킨다.
+    flexWrap: 'wrap',
     gap: 25, // 디자인 실측
   },
   cta: {

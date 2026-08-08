@@ -44,7 +44,9 @@ export function AvatarOption({
       accessibilityLabel={label}
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.container, style]}
+      // 폭을 아바타에 맞춰 고정해야 긴 이름이 옆으로 삐져나가지 않고 잘린다.
+      // (numberOfLines 만으로는 줄 수만 제한될 뿐 폭은 늘어난다.)
+      style={[styles.container, { width: size }, style]}
     >
       <View
         style={[
@@ -56,10 +58,12 @@ export function AvatarOption({
       >
         <Icon width={size * 0.64} height={size * 0.64} color={colors.textSubtle} />
       </View>
+      {/* 이름은 최대 20자까지 들어올 수 있는데 아바타 폭은 72~132dp 라 반드시 잘라야 한다. */}
       <Text
         variant={selected ? 'labelSmall' : 'captionSmall'}
         color={dashed ? 'textSubtle' : 'textStrong'}
         align="center"
+        numberOfLines={1}
       >
         {label}
       </Text>

@@ -100,6 +100,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'center',
+    // 모달 폭(560)에 아바타가 5개까지 들어간다. 그 이상은 줄바꿈.
+    flexWrap: 'wrap',
     gap: spacing.xl,
   },
 });

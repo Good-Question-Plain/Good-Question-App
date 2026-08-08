@@ -1,8 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing, storyTints } from '@/shared/theme';
-import { Appear, ArrowLeftIcon, Button, Chip, PressableScale, Screen, Text } from '@/shared/ui';
+import { colors, hitSlopFor, radius, spacing, storyTints } from '@/shared/theme';
+import {
+  Appear,
+  ArrowLeftIcon,
+  Button,
+  Chip,
+  EmptyState,
+  PressableScale,
+  Screen,
+  Text,
+} from '@/shared/ui';
 
 import { findStory, MOCK_STORIES } from '../model/types';
 
@@ -15,7 +24,39 @@ import { findStory, MOCK_STORIES } from '../model/types';
 export function StoryDetailScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const story = findStory(id) ?? MOCK_STORIES[0];
+  const story = findStory(id);
+
+  const backButton = (
+    <Appear>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel="뒤로"
+        onPress={() => router.back()}
+        scaleTo={0.94}
+        hitSlop={hitSlopFor(24)}
+        style={styles.backButton}
+      >
+        <ArrowLeftIcon width={26} height={15} color={colors.text} />
+        <Text variant="body">뒤로</Text>
+      </PressableScale>
+    </Appear>
+  );
+
+  // 없는 id 로 들어온 경우(오래된 링크, 삭제된 이야기)에 다른 이야기를 대신
+  // 보여주면 사용자는 그게 맞는 줄 안다. 못 찾았다는 사실을 그대로 알린다.
+  if (story === undefined) {
+    return (
+      <Screen>
+        <View style={styles.page}>
+          {backButton}
+          <EmptyState
+            title="이야기를 찾을 수 없어요"
+            description="사라졌거나 주소가 바뀐 이야기예요"
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   const { title, minutes, tag, Icon, tags, summary, roleGuide, characters } = story;
   const tintIndex = MOCK_STORIES.findIndex((item) => item.id === story.id);
@@ -23,18 +64,7 @@ export function StoryDetailScreen(): React.JSX.Element {
   return (
     <Screen>
       <View style={styles.page}>
-        <Appear>
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel="뒤로"
-            onPress={() => router.back()}
-            scaleTo={0.94}
-            style={styles.backButton}
-          >
-            <ArrowLeftIcon width={26} height={15} color={colors.text} />
-            <Text variant="body">뒤로</Text>
-          </PressableScale>
-        </Appear>
+        {backButton}
 
         <ScrollView contentContainerStyle={styles.bodyScroll}>
           <View style={styles.body}>

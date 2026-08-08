@@ -40,6 +40,23 @@ export const hitSize = {
   min: 48,
 } as const;
 
+/**
+ * 시각적으로 작은 버튼(아이콘 하나짜리)의 터치 영역을 `hitSize.min` 까지 넓힌다.
+ *
+ * 크기를 키우면 디자인이 틀어지므로, 보이는 크기는 그대로 두고 눌리는 범위만
+ * 넓히는 `hitSlop` 을 쓴다. 저연령 사용자는 조준이 부정확해서 작은 아이콘을
+ * 여러 번 헛누르는데, 그때 "고장났다"고 인식한다.
+ */
+export function hitSlopFor(visualSize: number): {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+} {
+  const extra = Math.max(0, Math.round((hitSize.min - visualSize) / 2));
+  return { top: extra, bottom: extra, left: extra, right: extra };
+}
+
 export const shadow = {
   none: {},
   sm: {

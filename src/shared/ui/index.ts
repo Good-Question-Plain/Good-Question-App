@@ -8,6 +8,7 @@ export { Card, type CardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
+export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { Input, type InputProps, type InputStatus } from './Input';
 export {
   ArrowLeftIcon,

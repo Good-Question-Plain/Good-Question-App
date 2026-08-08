@@ -1,6 +1,6 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/shared/theme';
+import { colors, hitSlopFor, radius, spacing } from '@/shared/theme';
 import { HeartFillIcon, HeartLineIcon, PressableScale, Text } from '@/shared/ui';
 
 import type { WordEntry } from '../model/types';
@@ -42,12 +42,17 @@ export function WordCard({
         accessibilityState={{ selected: saved }}
         onPress={onToggleSave}
         scaleTo={0.85}
+        hitSlop={hitSlopFor(HEART_SIZE)}
         style={styles.heart}
       >
-        <HeartIcon width={18} height={18} color={saved ? colors.primary : colors.borderStrong} />
+        <HeartIcon
+          width={HEART_SIZE}
+          height={HEART_SIZE}
+          color={saved ? colors.primary : colors.borderStrong}
+        />
       </PressableScale>
 
-      <Text variant="word" color="primaryTextDeep" align="center">
+      <Text variant="word" color="primaryTextDeep" align="center" numberOfLines={2}>
         {word}
       </Text>
 
@@ -62,6 +67,8 @@ export function WordCard({
     </PressableScale>
   );
 }
+
+const HEART_SIZE = 18; // 디자인 실측
 
 const styles = StyleSheet.create({
   card: {
