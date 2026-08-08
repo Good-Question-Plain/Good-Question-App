@@ -1,8 +1,10 @@
-import { Image, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Image, type PressableProps, StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/shared/theme';
 
 import { googleLogo, KakaoLogo, NaverLogo } from './icons';
+import { PressableScale } from './PressableScale';
 import { Text } from './Text';
 
 export type SocialProvider = 'google' | 'kakao' | 'naver';
@@ -23,11 +25,26 @@ const LABEL: Record<SocialProvider, string> = {
  * 로고는 Figma 에서 내보낸 에셋을 그대로 쓴다. 구글만 PNG 이고 카카오·네이버는
  * 브랜드 색이 박힌 SVG 라, 구글은 흰 원형 테두리 안에 넣어 세 개의 크기를 맞춘다.
  */
-export function SocialButton({ provider, ...rest }: SocialButtonProps): React.JSX.Element {
+export function SocialButton({
+  provider,
+  onPressIn,
+  onPressOut,
+  ...rest
+}: SocialButtonProps): React.JSX.Element {
+  const [pressed, setPressed] = useState(false);
+
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      style={[styles.button, pressed && styles.pressed]}
+      onPressIn={(event) => {
+        setPressed(true);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        setPressed(false);
+        onPressOut?.(event);
+      }}
       {...rest}
     >
       <View style={styles.logo}>
@@ -41,7 +58,7 @@ export function SocialButton({ provider, ...rest }: SocialButtonProps): React.JS
       </View>
 
       <Text variant="body">{LABEL[provider]}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

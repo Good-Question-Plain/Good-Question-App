@@ -47,6 +47,18 @@ Pretendard 를 굵기별로 4개(Regular/SemiBold/Bold/Black) 번들해 쓴다.
 **`fontWeight` 로 굵기를 조절하지 않는다** — 안드로이드에서 가짜 볼드가 합성돼 자간이
 뭉개진다. 항상 `typography` 토큰(= 굵기별 `fontFamily`)을 통해 지정한다.
 
+### 모션
+
+저연령 사용자가 쓰는 앱이라 "눌렀다/바뀌었다"가 눈에 보여야 한다. 다만 느리면
+답답하니 값은 `theme/motion.ts` 토큰을 쓰고 duration 을 화면에서 직접 정하지 않는다.
+
+- 누를 수 있는 것은 `PressableScale` 로 감싸 눌림 피드백을 준다.
+- 등장 애니메이션은 `Appear` 를 쓴다. **opacity 0 에서 시작하는 애니메이션을
+  직접 만들지 않는다** — 애니메이션이 멈추면 화면이 빈 채로 남는다.
+  `Appear` 는 타이머 안전장치로 최종 상태를 보장한다.
+- 구현은 RN 내장 `Animated`. Reanimated 는 설치돼 있지만 직접 쓰지 않는다.
+- 기기의 '동작 줄이기' 설정을 존중한다 (`useReducedMotion`).
+
 ### 아이콘 · 이미지
 
 Figma 에서 내보낸 에셋만 쓴다. SVG path 를 직접 손으로 그리거나 비슷한 아이콘 라이브러리로

@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   type PressableProps,
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
 
 import { colors, hitSize, radius, spacing } from '@/shared/theme';
 
+import { PressableScale } from './PressableScale';
 import { Text } from './Text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -33,17 +34,28 @@ export function Button({
   fullWidth = false,
   disabled,
   style,
+  onPressIn,
+  onPressOut,
   ...rest
 }: ButtonProps): React.JSX.Element {
+  const [pressed, setPressed] = useState(false);
   const isDisabled = disabled === true || loading;
   const palette = variantPalette[variant];
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      onPressIn={(event) => {
+        setPressed(true);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        setPressed(false);
+        onPressOut?.(event);
+      }}
+      style={[
         styles.base,
         sizeStyles[size],
         { backgroundColor: palette.background, borderColor: palette.border },
@@ -67,7 +79,7 @@ export function Button({
           <ActivityIndicator style={styles.spinner} color={colors[palette.label]} />
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -144,16 +156,14 @@ const styles = StyleSheet.create({
 });
 
 const sizeStyles = StyleSheet.create({
-  // 디자인 실측: 기본 버튼 h=45, 모달 하단 버튼 h=48.
-  // hitSize.min(48) 보다 작은 45 는 태블릿에서도 폭이 넓어 터치에 문제없다.
+  // 디자인 실측: 로그인 화면의 기본 버튼 h=45, 모달 하단 버튼 h=48.
+  // 45 는 터치 권장치(48)보다 살짝 낮지만 버튼 폭이 넓어 실사용에 문제없다.
   md: {
-    minHeight: 45,
+    height: 45,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
   },
   lg: {
-    minHeight: hitSize.min,
+    height: hitSize.min,
     paddingHorizontal: spacing['3xl'],
-    paddingVertical: spacing.lg,
   },
 });

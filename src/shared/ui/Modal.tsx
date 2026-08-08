@@ -10,6 +10,8 @@ import {
 
 import { colors, radius, shadow, spacing } from '@/shared/theme';
 
+import { Appear } from './Appear';
+
 export interface ModalProps extends Pick<RNModalProps, 'onRequestClose'> {
   visible: boolean;
   children: ReactNode;
@@ -26,6 +28,9 @@ export interface ModalProps extends Pick<RNModalProps, 'onRequestClose'> {
  *
  * 딤 배경 + 가운데 정렬 카드까지가 이 컴포넌트의 책임이고, 내용은 전부 children 이다.
  * 안드로이드 뒤로가기는 `onRequestClose` 로 처리된다.
+ *
+ * 카드는 딤이 깔린 뒤 살짝 커지며 들어온다. 갑자기 나타나면 아이가 놀라고
+ * 어디를 봐야 할지 놓치기 쉬워서, 시선이 가운데로 모이도록 한 것이다.
  */
 export function Modal({
   visible,
@@ -53,7 +58,10 @@ export function Modal({
             onPress={onDismiss}
           />
         )}
-        <View style={[styles.card, { width }, cardStyle]}>{children}</View>
+        {/* key 를 visible 에 묶어, 다시 열 때마다 등장 애니메이션이 새로 돈다. */}
+        <Appear key={String(visible)} from="scale" style={[styles.card, { width }, cardStyle]}>
+          {children}
+        </Appear>
       </View>
     </RNModal>
   );

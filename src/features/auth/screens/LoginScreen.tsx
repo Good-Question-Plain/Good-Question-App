@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/shared/theme';
+import { colors, motion, radius, spacing } from '@/shared/theme';
 import {
+  Appear,
   Button,
   Divider,
   Input,
+  PressableScale,
   Screen,
   SocialButton,
   Text,
@@ -16,6 +18,10 @@ import {
  * 로그인 화면 (Figma 10:1100).
  *
  * 지금은 화면만 붙인 상태로, 실제 인증은 백엔드 API 가 나오면 `api/` 에 붙인다.
+ *
+ * 진입할 때 로고 → 폼 → 소셜 → 하단 링크 순으로 짧게 순차 등장한다.
+ * 시선이 위에서 아래로 자연스럽게 흐르게 하려는 것이고, 전체가 240ms 안에
+ * 끝나서 기다린다는 느낌은 주지 않는다.
  */
 export function LoginScreen(): React.JSX.Element {
   const [email, setEmail] = useState('');
@@ -34,16 +40,16 @@ export function LoginScreen(): React.JSX.Element {
   return (
     <Screen padded={false}>
       <View style={styles.page}>
-        <View style={styles.brand}>
+        <Appear style={styles.brand}>
           <Text variant="brand" color="primary">
             굿 퀘스천
           </Text>
           <Text variant="subtitle" color="textMuted">
             아이와 함께하는 이야기 대화
           </Text>
-        </View>
+        </Appear>
 
-        <View style={styles.card}>
+        <Appear style={styles.card} delay={motion.stagger}>
           <View style={styles.form}>
             <Input
               label="이메일"
@@ -69,28 +75,28 @@ export function LoginScreen(): React.JSX.Element {
 
           <Divider label="또는" />
 
-          <View style={styles.socials}>
+          <Appear style={styles.socials} delay={motion.stagger * 2}>
             <SocialButton provider="google" onPress={() => handleSocialPress('google')} />
             <SocialButton provider="kakao" onPress={() => handleSocialPress('kakao')} />
             <SocialButton provider="naver" onPress={() => handleSocialPress('naver')} />
-          </View>
-        </View>
+          </Appear>
+        </Appear>
 
-        <View style={styles.footer}>
-          <Pressable accessibilityRole="link">
+        <Appear style={styles.footer} delay={motion.stagger * 3}>
+          <PressableScale accessibilityRole="link" scaleTo={0.94}>
             <Text variant="button" color="primaryText">
               굿 퀘스천이 처음이신가요?
             </Text>
-          </Pressable>
+          </PressableScale>
           <Text variant="button" color="primaryText">
             |
           </Text>
-          <Pressable accessibilityRole="link">
+          <PressableScale accessibilityRole="link" scaleTo={0.94}>
             <Text variant="button" color="primaryText">
               비밀번호를 잃어버리셨나요?
             </Text>
-          </Pressable>
-        </View>
+          </PressableScale>
+        </Appear>
       </View>
     </Screen>
   );

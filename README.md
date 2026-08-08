@@ -44,10 +44,15 @@ npm run start
 ```bash
 npm run start      # Metro 번들러 (dev client 모드)
 npm run android    # 네이티브 빌드 + 기기 설치
+npm run web        # 브라우저 미리보기 (레이아웃/토큰 확인용)
 npm run lint       # ESLint
 npm run format     # Prettier
 npm run typecheck  # tsc --noEmit
 ```
+
+`npm run web` 은 배포 대상이 아니라 **퍼블리싱 검증용**이다. 브라우저에서
+1024×768 로 띄우면 디자인 실측값(폰트·색·높이·여백)을 개발자도구로 바로 대조할 수
+있다. 다만 애니메이션과 네이티브 동작은 반드시 실기기에서 확인해야 한다.
 
 ## 폴더 구조
 
