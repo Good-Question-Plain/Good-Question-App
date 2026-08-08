@@ -74,6 +74,7 @@ export function WordDetailScreen(): React.JSX.Element {
                 accessibilityRole="button"
                 accessibilityLabel="단어 듣기"
                 scaleTo={0.88}
+                hitSlop={hitSlopFor(ROUND_BUTTON_SIZE)}
                 style={[styles.roundButton, styles.speakerButton]}
                 onPress={() => {
                   // TODO: TTS 재생 연결
@@ -87,6 +88,7 @@ export function WordDetailScreen(): React.JSX.Element {
                 accessibilityLabel={saved ? '저장 해제' : '저장'}
                 accessibilityState={{ selected: saved }}
                 scaleTo={0.88}
+                hitSlop={hitSlopFor(ROUND_BUTTON_SIZE)}
                 style={[styles.roundButton, styles.saveButton]}
                 onPress={() => setSaved((prev) => !prev)}
               >
@@ -137,6 +139,9 @@ function Section({
   );
 }
 
+/** 디자인 실측. 48dp 보다 작아서 hitSlop 으로 터치 영역만 넓힌다. */
+const ROUND_BUTTON_SIZE = 40;
+
 const styles = StyleSheet.create({
   page: {
     flex: 1,
@@ -161,8 +166,8 @@ const styles = StyleSheet.create({
     gap: 13, // 디자인 실측
   },
   roundButton: {
-    width: 40, // 디자인 실측
-    height: 40,
+    width: ROUND_BUTTON_SIZE,
+    height: ROUND_BUTTON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
