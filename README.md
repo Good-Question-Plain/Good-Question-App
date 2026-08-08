@@ -50,6 +50,24 @@ npm run format     # Prettier
 npm run typecheck  # tsc --noEmit
 ```
 
+### 화면이 코드와 다르게 보일 때
+
+**Fast Refresh 가 조용히 반영되지 않는 일이 잦다.** 코드를 고쳤는데 화면이 그대로거나,
+심하면 이전 버전의 props 로 렌더돼 런타임 에러가 나기도 한다. 개발 중 실제로 여러 번
+겪었고, 원인은 Metro 의 모듈 캐시다.
+
+고친 내용이 안 보이면 **디버깅하기 전에 먼저** 캐시를 비우고 재시작한다.
+
+```bash
+npx expo start --dev-client --clear
+```
+
+그래도 그대로면 앱을 강제 종료했다가 다시 연다.
+
+```bash
+adb shell am force-stop com.goodquestion.app
+```
+
 `npm run web` 은 배포 대상이 아니라 **퍼블리싱 검증용**이다. 브라우저에서
 1024×768 로 띄우면 디자인 실측값(폰트·색·높이·여백)을 개발자도구로 바로 대조할 수
 있다. 다만 애니메이션과 네이티브 동작은 반드시 실기기에서 확인해야 한다.

@@ -105,3 +105,16 @@ Figma 에서 내보낸 에셋만 쓴다. SVG path 를 직접 손으로 그리거
 npm run typecheck
 npm run lint
 ```
+
+### 화면이 코드와 다를 때는 캐시부터 의심한다
+
+**Fast Refresh 가 조용히 반영되지 않는 일이 잦다.** 고친 내용이 화면에 없거나,
+이전 버전의 props 로 렌더돼 런타임 에러가 나기도 한다. 원인은 Metro 의 모듈 캐시다.
+
+증상이 보이면 **코드를 파기 전에** 먼저 아래를 시도한다. 이걸 건너뛰면 멀쩡한 코드를
+잘못 진단하게 된다 (실제로 그렇게 한 번 오진했다).
+
+```bash
+npx expo start --dev-client --clear
+adb shell am force-stop com.goodquestion.app
+```
