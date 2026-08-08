@@ -11,10 +11,14 @@
 const palette = {
   // primary (Figma: primary/*)
   primary50: '#FFFBF6',
+  primary150: '#FFEEC2',
+  primary200: '#FFDB99',
+  primary250: '#FFCB6B',
   primary300: '#FFC266',
   primary400: '#FFA833',
   primary500: '#FF9200',
   primary600: '#E07D00',
+  primary700: '#B86200',
 
   // neutral (Figma: Netutral/*)
   neutral0: '#FFFFFF',
@@ -34,6 +38,8 @@ const palette = {
   danger500: '#DC2626',
   /** 입력 검증 통과(비밀번호 일치 등). Variable 미등록. */
   success500: '#82C91E',
+  /** 인증코드 남은 시간 표시. Variable 미등록. */
+  warning500: '#F59E0B',
 
   // 소셜 로그인 브랜드
   kakaoLogo: '#000000',
@@ -71,11 +77,18 @@ export const colors = {
   primarySubtle: palette.primary50,
   /** 링크·강조 텍스트 */
   primaryText: palette.primary600,
+  /** 축하 화면 제목처럼 더 진한 브랜드 텍스트 */
+  primaryTextDeep: palette.primary700,
+  /** 장식용 점 (회원가입 완료 화면) */
+  decorLight: palette.primary200,
+  decorMid: palette.primary250,
 
   // 상태
   danger: palette.danger500,
   dangerPressed: palette.danger500,
   success: palette.success500,
+  /** 남은 시간 카운트다운 */
+  timer: palette.warning500,
 
   // 비활성
   disabled: palette.neutral300,
@@ -88,3 +101,12 @@ export const colors = {
 } as const;
 
 export type ColorToken = keyof typeof colors;
+
+/**
+ * 아바타 배경 톤. 디자인이 아이마다 세 톤을 번갈아 쓴다
+ * (선택된 아바타는 항상 가장 옅은 톤 + 주황 테두리).
+ *
+ * `colors` 안에 두지 않는 이유: `colors` 의 값은 전부 단일 색 문자열이어야
+ * `Text` 의 `color` prop 같은 토큰 참조가 타입으로 보장된다.
+ */
+export const avatarTints = [palette.primary150, palette.primary200, palette.primary250] as const;

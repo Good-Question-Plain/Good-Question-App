@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -24,6 +25,7 @@ import {
  * 끝나서 기다린다는 느낌은 주지 않는다.
  */
 export function LoginScreen(): React.JSX.Element {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -85,7 +87,11 @@ export function LoginScreen(): React.JSX.Element {
         </Appear>
 
         <Appear style={styles.footer} delay={motion.stagger * 3}>
-          <PressableScale accessibilityRole="link" scaleTo={0.94}>
+          <PressableScale
+            accessibilityRole="link"
+            scaleTo={0.94}
+            onPress={() => router.push('/signup')}
+          >
             <Text variant="button" color="primaryText">
               굿 퀘스천이 처음이신가요?
             </Text>
@@ -93,7 +99,11 @@ export function LoginScreen(): React.JSX.Element {
           <Text variant="button" color="primaryText">
             |
           </Text>
-          <PressableScale accessibilityRole="link" scaleTo={0.94}>
+          <PressableScale
+            accessibilityRole="link"
+            scaleTo={0.94}
+            onPress={() => router.push('/find-password')}
+          >
             <Text variant="button" color="primaryText">
               비밀번호를 잃어버리셨나요?
             </Text>

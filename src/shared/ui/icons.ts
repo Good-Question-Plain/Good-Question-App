@@ -12,6 +12,9 @@
 export { default as CheckIcon } from '@assets/icons/check.svg';
 export { default as CheckCircleIcon } from '@assets/icons/check-circle.svg';
 export { default as WarningIcon } from '@assets/icons/warning.svg';
+export { default as CelebrateIcon } from '@assets/icons/celebrate.svg';
+export { default as CameraIcon } from '@assets/icons/camera.svg';
+export { default as PlusIcon } from '@assets/icons/plus.svg';
 
 export { default as TabHomeIcon } from '@assets/icons/tab-home.svg';
 export { default as TabStoryIcon } from '@assets/icons/tab-story.svg';

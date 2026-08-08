@@ -3,7 +3,7 @@ import { motion } from './motion';
 import { hitSize, radius, shadow, spacing } from './spacing';
 import { fontFamily, typography } from './typography';
 
-export { colors, type ColorToken } from './colors';
+export { avatarTints, colors, type ColorToken } from './colors';
 export { fontAssets } from './fonts';
 export { motion } from './motion';
 export { hitSize, radius, shadow, spacing, type RadiusToken, type SpacingToken } from './spacing';

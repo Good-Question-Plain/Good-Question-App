@@ -39,6 +39,12 @@ export const typography = {
   button: { fontFamily: fontFamily.bold, fontSize: 16, lineHeight: 24 },
   /** 작은 버튼 라벨 — 15/Bold */
   buttonSmall: { fontFamily: fontFamily.bold, fontSize: 15, lineHeight: 22 },
+  /** 작은 라벨 (아바타 이름, 선택 상태) — 15/SemiBold */
+  labelSmall: { fontFamily: fontFamily.semiBold, fontSize: 15, lineHeight: 20 },
+  /** 작은 보조 라벨 (아바타 이름, 기본 상태) — 12/Regular */
+  captionSmall: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
+  /** 인증코드 한 글자 — 20/SemiBold */
+  otp: { fontFamily: fontFamily.semiBold, fontSize: 20, lineHeight: 24 },
   /** 보조 설명 — 13/Regular */
   caption: { fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 18 },
   /** 가장 작은 안내 문구 — 11/Regular */
