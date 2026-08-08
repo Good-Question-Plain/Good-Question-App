@@ -59,6 +59,19 @@ Pretendard 를 굵기별로 4개(Regular/SemiBold/Bold/Black) 번들해 쓴다.
 - 구현은 RN 내장 `Animated`. Reanimated 는 설치돼 있지만 직접 쓰지 않는다.
 - 기기의 '동작 줄이기' 설정을 존중한다 (`useReducedMotion`).
 
+### 키보드
+
+**입력이 있는 화면은 `Screen` 에 `scrollable` 을 켠다.**
+
+이 프로젝트는 edge-to-edge 가 켜져 있어(Expo SDK 54+ 기본값) AndroidManifest 의
+`adjustResize` 가 동작하지 않는다. 키보드는 창을 밀지 않고 위에 겹치기만 한다.
+태블릿 키보드는 화면 절반가량을 차지해서, 스크롤이 없으면 하단 버튼에 손이 닿지 않는다.
+(실제로 로그인 화면의 "계속하기" 버튼이 완전히 가려지는 걸 기기에서 확인했다.)
+
+`Screen` 이 `useKeyboardInset` 으로 키보드 높이만큼 아래 여백을 잡아주지만,
+**화면 쪽 스타일에서 `flex: 1` 을 쓰면 높이가 뷰포트에 고정돼 스크롤이 생기지 않는다.**
+스크롤 화면의 최상위 컨테이너에는 `flexGrow: 1` 을 쓴다.
+
 ### 아이콘 · 이미지
 
 Figma 에서 내보낸 에셋만 쓴다. SVG path 를 직접 손으로 그리거나 비슷한 아이콘 라이브러리로

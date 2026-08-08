@@ -37,8 +37,10 @@ export function LoginScreen(): React.JSX.Element {
     // TODO: 소셜 로그인 연동
   };
 
+  // 태블릿 소프트 키보드는 화면 절반가량을 덮는다. scrollable 로 두지 않으면
+  // 키보드가 올라온 동안 "계속하기" 버튼에 손이 닿지 않는다.
   return (
-    <Screen padded={false}>
+    <Screen padded={false} scrollable>
       <View style={styles.page}>
         <Appear style={styles.brand}>
           <Text variant="brand" color="primary">
@@ -104,7 +106,8 @@ export function LoginScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   page: {
-    flex: 1,
+    // Screen 의 scrollable 경로에 맞춰 flexGrow 를 쓴다 (flex:1 이면 스크롤이 안 생긴다).
+    flexGrow: 1,
     alignItems: 'center',
     gap: spacing['2xl'],
     paddingTop: spacing['3xl'],
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   card: {
-    flex: 1,
+    flexGrow: 1,
     alignSelf: 'stretch',
     justifyContent: 'center',
     gap: spacing.md,

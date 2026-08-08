@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useKeyboardInset } from '@/shared/hooks/useKeyboardInset';
 import { DESIGN_WIDTH, useResponsive } from '@/shared/hooks/useResponsive';
 import { colors, spacing } from '@/shared/theme';
 
@@ -33,6 +34,7 @@ export function Screen({
   style,
 }: ScreenProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const keyboardInset = useKeyboardInset();
   const { select } = useResponsive();
 
   const horizontalPadding = padded ? select({ compact: spacing.lg, medium: spacing['2xl'] }) : 0;
@@ -40,7 +42,10 @@ export function Screen({
   const content = (
     <View
       style={[
-        styles.content,
+        // 스크롤 화면에서는 flex 대신 flexGrow 를 쓴다. flex:1 은 높이를 뷰포트에
+        // 고정해버려서 내용이 넘쳐도 스크롤이 생기지 않고 잘리기만 한다.
+        // flexGrow:1 이면 남는 공간은 채우되, 모자라면 자기 높이만큼 넘어간다.
+        scrollable ? styles.scrollableContent : styles.content,
         maxContentWidth !== null && { maxWidth: maxContentWidth, alignSelf: 'center' },
         style,
       ]}
@@ -51,7 +56,10 @@ export function Screen({
 
   const frame: ViewStyle = {
     paddingTop: insets.top,
-    paddingBottom: insets.bottom,
+    // 키보드가 올라오면 그만큼 아래를 비운다. edge-to-edge 환경에서는 adjustResize
+    // 가 창을 줄여주지 않아서 직접 처리해야 한다 (useKeyboardInset 주석 참고).
+    // 키보드 높이에는 내비게이션 바가 이미 포함돼 있어 둘을 더하지 않고 큰 쪽을 쓴다.
+    paddingBottom: Math.max(insets.bottom, keyboardInset),
     paddingLeft: insets.left + horizontalPadding,
     paddingRight: insets.right + horizontalPadding,
   };
@@ -81,6 +89,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    width: '100%',
+  },
+  scrollableContent: {
+    flexGrow: 1,
     width: '100%',
   },
 });
