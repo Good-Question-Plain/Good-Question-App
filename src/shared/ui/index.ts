@@ -34,6 +34,7 @@ export {
   ReportIcon,
   SearchIcon,
   SettingsIcon,
+  SparkleIcon,
   SpeakerIcon,
   WarningIcon,
   WithdrawIcon,

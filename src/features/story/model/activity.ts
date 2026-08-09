@@ -22,6 +22,12 @@ export interface StoryActivity {
   shuffledIds: readonly string[];
   /** 이야기에서 건진 낱말. 단어장으로 이어질 값이다. */
   keywords: readonly string[];
+  /**
+   * 아이가 이야기를 다시 말했다고 가정할 문장 (활동 2/2).
+   *
+   * TODO: STT 가 붙으면 사라진다. 지금은 마이크를 누르면 이게 대신 적힌다.
+   */
+  retellSample: string;
 }
 
 const PIGS_ACTIVITY: StoryActivity = {
@@ -35,6 +41,8 @@ const PIGS_ACTIVITY: StoryActivity = {
   ],
   shuffledIds: ['wolf', 'brick', 'straw', 'together', 'wood'],
   keywords: ['용감한', '친구', '숲', '모험'],
+  retellSample:
+    '옛날 옛적에 아기 돼지 삼형제가 살았어요. 지푸라기집이랑 나무집은 늑대가 후 불어서 무너졌는데, 벽돌집은 튼튼해서 안 무너졌어요. 그래서 삼형제가 다 같이 안전하게 지냈어요.',
 };
 
 const ACTIVITIES: readonly StoryActivity[] = [PIGS_ACTIVITY];

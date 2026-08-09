@@ -29,8 +29,13 @@ export { default as LogoutIcon } from '@assets/icons/logout.svg';
 export { default as WithdrawIcon } from '@assets/icons/withdraw.svg';
 export { default as HeartFillIcon } from '@assets/icons/heart-fill.svg';
 export { default as MicIcon } from '@assets/icons/mic.svg';
-/** 활동 화면에서 아이에게 말을 거는 안내 캐릭터의 얼굴 */
+/**
+ * 활동 화면에서 아이에게 말을 거는 안내 캐릭터의 얼굴.
+ * 활동 완료 화면(92:1341)의 큰 그림도 같은 벡터라 크기만 키워 쓴다.
+ */
 export { default as GuideFaceIcon } from '@assets/icons/guide-face.svg';
+/** 완료 화면 주변에 흩뿌리는 반짝임 (92:1359) */
+export { default as SparkleIcon } from '@assets/icons/sparkle.svg';
 /** 아이 말을 받아 적는 중이라는 표시. 세 점이 비스듬히 올라간 모양이다. */
 export { default as ListeningDotsIcon } from '@assets/icons/listening-dots.svg';
 export { default as HeartLineIcon } from '@assets/icons/heart-line.svg';

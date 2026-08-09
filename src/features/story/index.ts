@@ -1,5 +1,7 @@
 export { HomeScreen, type HomeScreenProps } from './screens/HomeScreen';
 export { StoryActivityScreen } from './screens/StoryActivityScreen';
+export { StoryDoneScreen } from './screens/StoryDoneScreen';
+export { StoryRetellScreen } from './screens/StoryRetellScreen';
 export { StoryDetailScreen } from './screens/StoryDetailScreen';
 export { StoryListScreen } from './screens/StoryListScreen';
 export { StoryPlayScreen } from './screens/StoryPlayScreen';

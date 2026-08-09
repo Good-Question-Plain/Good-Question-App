@@ -37,6 +37,8 @@ export const typography = {
   label: { fontFamily: fontFamily.semiBold, fontSize: 16, lineHeight: 24, letterSpacing: 0.1 },
   /** 본문 — 16/Regular */
   body: { fontFamily: fontFamily.regular, fontSize: 16, lineHeight: 24 },
+  /** 길게 읽는 본문 (활동 화면의 받아쓴 이야기) — 18/Regular */
+  bodyMedium: { fontFamily: fontFamily.regular, fontSize: 18, lineHeight: 28.8 },
   /** 큰 본문 (홈 인사말 아래 서브카피) — 20/Regular */
   bodyLarge: { fontFamily: fontFamily.regular, fontSize: 20, lineHeight: 24 },
   /** 버튼 라벨 — 16/Bold */

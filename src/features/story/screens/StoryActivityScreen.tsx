@@ -166,9 +166,7 @@ export function StoryActivityScreen(): React.JSX.Element {
               label="이제 이야기를 만들어볼까?"
               size="xl"
               style={styles.wideCta}
-              onPress={() => {
-                // TODO: 활동 2/2(이야기 다시 말하기, 디자인 92:1290) 연결
-              }}
+              onPress={() => router.replace({ pathname: '/story/[id]/retell', params: { id } })}
             />
           ) : result === 'wrong' ? (
             <Button label="다시 놓아보기" size="xl" onPress={retry} />
