@@ -126,8 +126,7 @@ export function StoryPlayScreen(): React.JSX.Element {
 
   const handleSend = (): void => {
     if (isLastScene) {
-      // TODO: 이야기 후 활동 화면으로 연결 (디자인 234:562)
-      router.back();
+      router.replace({ pathname: '/story/[id]/activity', params: { id } });
       return;
     }
     setSceneIndex((index) => index + 1);

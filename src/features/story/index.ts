@@ -1,4 +1,5 @@
 export { HomeScreen, type HomeScreenProps } from './screens/HomeScreen';
+export { StoryActivityScreen } from './screens/StoryActivityScreen';
 export { StoryDetailScreen } from './screens/StoryDetailScreen';
 export { StoryListScreen } from './screens/StoryListScreen';
 export { StoryPlayScreen } from './screens/StoryPlayScreen';
@@ -6,3 +7,5 @@ export { findStory, MOCK_PROGRESS, MOCK_STORIES, STORY_CATEGORIES } from './mode
 export type { Story, StoryCategory, StoryProgress } from './model/types';
 export { findScript } from './model/script';
 export type { StoryLine, StoryScene, StoryScript } from './model/script';
+export { findActivity } from './model/activity';
+export type { StoryActivity, StoryCard } from './model/activity';

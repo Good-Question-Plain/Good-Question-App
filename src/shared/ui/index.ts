@@ -21,6 +21,7 @@ export {
   CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  GuideFaceIcon,
   HeartDetailIcon,
   HeartFillIcon,
   HeartLineIcon,
