@@ -19,6 +19,7 @@ const palette = {
   primary500: '#FF9200',
   primary600: '#E07D00',
   primary700: '#B86200',
+  primary800: '#824200',
 
   // neutral (Figma: Netutral/*)
   neutral0: '#FFFFFF',
@@ -61,6 +62,10 @@ export const colors = {
   surfaceAccentWarm: palette.peach50,
   /** 눌림 상태·보조 버튼·정보 블록 배경 */
   surfaceMuted: palette.neutral200,
+  /** 배경 그림 위에 글을 얹는 반투명하지 않은 패널 (대화 화면의 줄거리·미션) */
+  surfaceSubtle: palette.neutral100,
+  /** 아직 쓸 수 없는 큰 컨트롤의 배경 (대화 화면의 마이크) */
+  surfaceInactive: palette.neutral500,
 
   // 텍스트
   text: palette.neutral900,
@@ -89,6 +94,8 @@ export const colors = {
   primaryText: palette.primary600,
   /** 축하 화면 제목처럼 더 진한 브랜드 텍스트 */
   primaryTextDeep: palette.primary700,
+  /** 배경 그림 위에서도 읽혀야 하는 가장 진한 브랜드 텍스트 (대화 화면 상태 문구) */
+  primaryTextDeepest: palette.primary800,
   /** 선택 가능한 칩·아바타의 옅은 주황 배경 */
   primarySelected: palette.primary150,
   /** `primarySelected` 위에 한 단계 더 얹는 배경 (홈 추천 카드의 썸네일·태그) */

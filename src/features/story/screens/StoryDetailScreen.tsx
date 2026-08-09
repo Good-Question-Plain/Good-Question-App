@@ -115,9 +115,9 @@ export function StoryDetailScreen(): React.JSX.Element {
                 fullWidth
                 size="lg"
                 style={styles.cta}
-                onPress={() => {
-                  // TODO: 대화 화면 연결 (디자인 준비 중)
-                }}
+                onPress={() =>
+                  router.push({ pathname: '/story/[id]/play', params: { id: story.id } })
+                }
               />
             </Appear>
           </View>

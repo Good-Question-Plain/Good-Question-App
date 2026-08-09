@@ -8,6 +8,13 @@ import { colors, spacing } from '@/shared/theme';
 
 export interface ScreenProps {
   children: ReactNode;
+  /**
+   * 세이프에어리어와 좌우 여백 **바깥까지** 꽉 채우는 배경. 내용 뒤에 깔린다.
+   *
+   * 대화 화면처럼 배경 그림이 화면 끝까지 가야 하는 경우에 쓴다. children 안에
+   * 넣으면 여백만큼 안쪽으로 밀려서 가장자리에 빈 띠가 생긴다.
+   */
+  backdrop?: ReactNode;
   /** 내용이 길어 스크롤이 필요한 화면에서 켠다. */
   scrollable?: boolean;
   /** 좌우 여백을 직접 제어하고 싶을 때(예: 풀블리드 리스트) 끈다. */
@@ -28,6 +35,7 @@ export interface ScreenProps {
  */
 export function Screen({
   children,
+  backdrop,
   scrollable = false,
   padded = true,
   maxContentWidth = DESIGN_WIDTH,
@@ -76,7 +84,16 @@ export function Screen({
     );
   }
 
-  return <View style={[styles.root, frame]}>{content}</View>;
+  return (
+    <View style={[styles.root, frame]}>
+      {backdrop !== undefined && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {backdrop}
+        </View>
+      )}
+      {content}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

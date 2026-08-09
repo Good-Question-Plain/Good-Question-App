@@ -1,6 +1,6 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { avatarTints, radius } from '@/shared/theme';
+import { avatarTints, radius, type ColorToken } from '@/shared/theme';
 
 import { Text } from './Text';
 
@@ -10,6 +10,8 @@ export interface InitialBadgeProps {
   size?: number;
   /** 배경 톤을 고르는 값. 목록에서의 순서를 그대로 넣으면 된다. */
   tintIndex?: number;
+  /** 글자색. 대화 화면의 등장인물 뱃지처럼 진한 주황을 쓰는 곳이 있다. */
+  color?: ColorToken;
   style?: ViewStyle;
 }
 
@@ -23,6 +25,7 @@ export function InitialBadge({
   name,
   size = 40,
   tintIndex = 0,
+  color = 'text',
   style,
 }: InitialBadgeProps): React.JSX.Element {
   const tint = avatarTints[tintIndex % avatarTints.length];
@@ -35,7 +38,9 @@ export function InitialBadge({
         style,
       ]}
     >
-      <Text variant={labelVariant(size)}>{name.slice(0, 1)}</Text>
+      <Text variant={labelVariant(size)} color={color}>
+        {name.slice(0, 1)}
+      </Text>
     </View>
   );
 }

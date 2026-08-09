@@ -28,6 +28,9 @@ export { default as HelpIcon } from '@assets/icons/help.svg';
 export { default as LogoutIcon } from '@assets/icons/logout.svg';
 export { default as WithdrawIcon } from '@assets/icons/withdraw.svg';
 export { default as HeartFillIcon } from '@assets/icons/heart-fill.svg';
+export { default as MicIcon } from '@assets/icons/mic.svg';
+/** 아이 말을 받아 적는 중이라는 표시. 세 점이 비스듬히 올라간 모양이다. */
+export { default as ListeningDotsIcon } from '@assets/icons/listening-dots.svg';
 export { default as HeartLineIcon } from '@assets/icons/heart-line.svg';
 
 export { default as TabHomeIcon } from '@assets/icons/tab-home.svg';

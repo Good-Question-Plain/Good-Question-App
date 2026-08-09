@@ -65,6 +65,8 @@ export const typography = {
   captionStrong: { fontFamily: fontFamily.semiBold, fontSize: 14, lineHeight: 20 },
   /** 보조 설명 — 13/Regular */
   caption: { fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 18 },
+  /** 작은 강조 라벨 (대화 화면의 섹션 뱃지·진행도·상태 문구) — 12/SemiBold */
+  captionSmallStrong: { fontFamily: fontFamily.semiBold, fontSize: 12, lineHeight: 16 },
   /** 가장 작은 안내 문구 — 11/Regular */
   footnote: { fontFamily: fontFamily.regular, fontSize: 11, lineHeight: 16 },
 } as const satisfies Record<string, TextStyle>;
