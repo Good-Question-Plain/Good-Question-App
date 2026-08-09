@@ -194,8 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderRadius: radius.full,
-    // 고리 색은 디자인에 투명도까지 지정돼 있다 (primary/300 49%, primary/500 50%).
-    borderColor: 'rgba(255, 194, 102, 0.49)',
+    borderColor: colors.listeningRingOuter,
   },
   innerRing: {
     width: INNER_RING,
@@ -204,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderRadius: radius.full,
-    borderColor: 'rgba(255, 146, 0, 0.5)',
+    borderColor: colors.listeningRingInner,
   },
   listeningButton: {
     width: LISTENING_SIZE,

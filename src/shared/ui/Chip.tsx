@@ -1,6 +1,6 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing, type TypographyVariant } from '@/shared/theme';
+import { colors, hitSlopFor, radius, spacing, type TypographyVariant } from '@/shared/theme';
 
 import { PressableScale } from './PressableScale';
 import { Text } from './Text';
@@ -52,6 +52,9 @@ export function Chip({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
+      // 카테고리 칩은 디자인상 32dp 라 터치 권장치(48)보다 낮다. 보이는 크기는
+      // 그대로 두고 눌리는 범위만 넓힌다 — 아이는 칩을 자주 헛누른다.
+      hitSlop={hitSlopFor(visualHeight[size])}
       style={containerStyle}
     >
       {content}
@@ -72,6 +75,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
 });
+
+/** 눌리는 범위를 계산할 때 쓰는 실제 높이(디자인 실측). */
+const visualHeight = {
+  md: 32,
+  sm: 24,
+  lg: 36,
+} as const satisfies Record<NonNullable<ChipProps['size']>, number>;
 
 const labelVariant = {
   md: 'chip',

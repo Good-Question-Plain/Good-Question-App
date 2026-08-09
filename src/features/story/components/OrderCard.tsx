@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
     right: -HALO_SPREAD,
     bottom: -HALO_SPREAD,
     borderRadius: radius.md + HALO_SPREAD,
-    // 디자인의 그림자 spread 를 그대로 옮긴 값. RN 은 spread 를 못 그려서 면으로 만든다.
-    backgroundColor: 'rgba(255, 146, 0, 0.12)',
+    // RN 은 그림자 spread 를 못 그려서 같은 색 면으로 대신한다.
+    backgroundColor: colors.primaryHalo,
   },
   card: {
     flex: 1,

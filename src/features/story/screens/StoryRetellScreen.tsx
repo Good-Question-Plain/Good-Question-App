@@ -38,10 +38,25 @@ export function StoryRetellScreen(): React.JSX.Element {
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
 
+  const backButton = (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel="앞 활동으로"
+      onPress={() => router.back()}
+      scaleTo={0.94}
+      hitSlop={hitSlopFor(24)}
+      style={styles.backButton}
+    >
+      <ArrowLeftIcon width={26} height={15} color={colors.text} />
+      <Text variant="heading">이야기를 다시 말해볼까?</Text>
+    </PressableScale>
+  );
+
   if (activity === undefined) {
     return (
       <Screen>
         <View style={styles.page}>
+          {backButton}
           <EmptyState
             title="아직 준비 중인 활동이에요"
             description={`${story?.title ?? '이 이야기'}는 곧 활동도 만들 수 있어요`}
@@ -65,17 +80,7 @@ export function StoryRetellScreen(): React.JSX.Element {
     <Screen>
       <View style={styles.page}>
         <View style={styles.topBar}>
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel="앞 활동으로"
-            onPress={() => router.back()}
-            scaleTo={0.94}
-            hitSlop={hitSlopFor(24)}
-            style={styles.backButton}
-          >
-            <ArrowLeftIcon width={26} height={15} color={colors.text} />
-            <Text variant="heading">이야기를 다시 말해볼까?</Text>
-          </PressableScale>
+          {backButton}
 
           <View style={styles.topRight}>
             <Text variant="chip" color="primary">

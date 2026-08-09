@@ -122,6 +122,14 @@ export const colors = {
   /** 모달 배경. 디자인 값 그대로 (neutral900 @ 50%). */
   overlay: 'rgba(33, 37, 41, 0.5)',
 
+  // 반투명 강조. 값은 전부 디자인 실측이고, 불투명도까지 시안에 지정돼 있다.
+  /** 녹음 중 마이크를 감싸는 바깥 고리 (primary/300 @ 49%) */
+  listeningRingOuter: 'rgba(255, 194, 102, 0.49)',
+  /** 녹음 중 마이크를 감싸는 안쪽 고리 (primary/500 @ 50%) */
+  listeningRingInner: 'rgba(255, 146, 0, 0.5)',
+  /** 고른 카드 주변의 후광. 디자인의 그림자 spread 를 면으로 옮긴 값 (primary/500 @ 12%) */
+  primaryHalo: 'rgba(255, 146, 0, 0.12)',
+
   kakaoLogo: palette.kakaoLogo,
 } as const;
 

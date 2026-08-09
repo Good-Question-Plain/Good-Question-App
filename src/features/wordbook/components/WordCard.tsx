@@ -29,13 +29,34 @@ export function WordCard({
   const HeartIcon = saved ? HeartFillIcon : HeartLineIcon;
 
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={`${word}, ${storyTitle}`}
-      onPress={onPress}
-      scaleTo={0.985}
-      style={[styles.card, style]}
-    >
+    // 하트는 카드 안에 있지만 **누르는 영역은 겹치면 안 된다.** 눌림 영역을 중첩하면
+    // 스크린리더가 두 버튼을 겹쳐 읽고, 웹에서는 button 안의 button 이 되어 DOM 이
+    // 깨진다. 그래서 형제로 두고 위에 얹는다.
+    <View style={[styles.slot, style]}>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={`${word}, ${storyTitle}`}
+        onPress={onPress}
+        scaleTo={0.985}
+        style={styles.card}
+      >
+        {/* 하트가 차지하던 자리. 빼면 단어가 위로 올라붙는다. */}
+        <View style={styles.heartSpacer} />
+
+        <Text variant="word" color="primaryTextDeep" align="center" numberOfLines={2}>
+          {word}
+        </Text>
+
+        <View style={styles.footer}>
+          <View style={styles.childBadge}>
+            <Text variant="badge">{childName.slice(0, 1)}</Text>
+          </View>
+          <Text variant="caption" color="textMuted" numberOfLines={1} style={styles.storyTitle}>
+            {storyTitle}
+          </Text>
+        </View>
+      </PressableScale>
+
       <PressableScale
         accessibilityRole="button"
         accessibilityLabel={saved ? '저장 해제' : '저장'}
@@ -51,27 +72,17 @@ export function WordCard({
           color={saved ? colors.primary : colors.borderStrong}
         />
       </PressableScale>
-
-      <Text variant="word" color="primaryTextDeep" align="center" numberOfLines={2}>
-        {word}
-      </Text>
-
-      <View style={styles.footer}>
-        <View style={styles.childBadge}>
-          <Text variant="badge">{childName.slice(0, 1)}</Text>
-        </View>
-        <Text variant="caption" color="textMuted" numberOfLines={1} style={styles.storyTitle}>
-          {storyTitle}
-        </Text>
-      </View>
-    </PressableScale>
+    </View>
   );
 }
 
 const HEART_SIZE = 18; // 디자인 실측
 
 const styles = StyleSheet.create({
+  // 카드 크기는 호출부(style)가 정한다. 하트를 얹기 위한 기준 상자일 뿐이다.
+  slot: {},
   card: {
+    flex: 1,
     justifyContent: 'space-between',
     gap: spacing['3xl'],
     paddingHorizontal: spacing.lg,
@@ -81,8 +92,14 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceMuted,
     backgroundColor: colors.surface,
   },
+  heartSpacer: {
+    height: HEART_SIZE,
+  },
+  // 카드 안 오른쪽 위. 카드의 패딩과 같은 값이라 원래 자리 그대로다.
   heart: {
-    alignSelf: 'flex-end',
+    position: 'absolute',
+    top: 13, // 카드의 paddingVertical
+    right: spacing.lg, // 카드의 paddingHorizontal
   },
   footer: {
     flexDirection: 'row',

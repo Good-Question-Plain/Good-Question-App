@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/shared/theme';
-import { Appear, Button, GuideFaceIcon, Screen, SparkleIcon, Text } from '@/shared/ui';
+import { Appear, Button, EmptyState, GuideFaceIcon, Screen, SparkleIcon, Text } from '@/shared/ui';
 
 import { findActivity } from '../model/activity';
 import { findScript } from '../model/script';
@@ -21,9 +21,26 @@ export function StoryDoneScreen(): React.JSX.Element {
   const script = findScript(id);
   const activity = findActivity(id);
 
+  // 대본도 활동도 없는 이야기로 곧장 들어온 경우(오래된 링크, 딥링크). 0번·0개짜리
+  // 축하 화면을 띄우면 하지도 않은 걸 했다고 알리는 셈이라, 그대로 사실을 알린다.
+  if (script === undefined || activity === undefined) {
+    return (
+      <Screen>
+        <View style={styles.page}>
+          <EmptyState title="아직 마칠 이야기가 없어요" description="이야기를 먼저 나눠볼까요?" />
+          <Button
+            label="이야기 보러 가기"
+            size="lg"
+            onPress={() => router.replace('/(tabs)/story')}
+          />
+        </View>
+      </Screen>
+    );
+  }
+
   // 대화에서 아이가 말한 횟수는 장면 수와 같다(장면마다 한 번 답한다).
-  const turnCount = script?.scenes.length ?? 0;
-  const wordCount = activity?.keywords.length ?? 0;
+  const turnCount = script.scenes.length;
+  const wordCount = activity.keywords.length;
 
   return (
     <Screen>
