@@ -51,6 +51,15 @@ export function ChildProfileModal({
 }: ChildProfileModalProps): React.JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(activeId);
 
+  // 열릴 때마다 "지금 쓰는 아이"로 되돌린다. 고르다 취소하고 다시 열었을 때 이전
+  // 선택이 남아 있으면, 화면은 지오인데 모달은 하윤이 골라진 상태가 된다.
+  // 그대로 "선택 완료"를 누르면 아이가 의도치 않게 바뀐다.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) setSelectedId(activeId);
+  }
+
   const handleConfirm = (): void => {
     if (selectedId !== null) onSelect(selectedId);
     onClose();

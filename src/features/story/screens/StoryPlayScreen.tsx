@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 
-import { colors, hitSlopFor, radius, spacing } from '@/shared/theme';
+import { colors, hitSize, hitSlopFor, radius, spacing } from '@/shared/theme';
 import {
   Appear,
   ArrowLeftIcon,
@@ -203,16 +203,21 @@ export function StoryPlayScreen(): React.JSX.Element {
 
         <View style={styles.micArea}>
           <MicControl state={micState} onPress={handleMicPress} />
-          {micState !== 'blocked' && (
-            <Button
-              label={isLastScene ? '마치기' : '보내기'}
-              // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
-              size="lg"
-              disabled={reply === null}
-              style={styles.send}
-              onPress={handleSend}
-            />
-          )}
+
+          {/* 보내기는 아이 차례에만 나오지만(디자인 86:410 엔 없다) 자리는 늘 비워둔다.
+              버튼이 생겼다 사라지면 그 위의 마이크가 손가락 밑에서 위아래로 움직인다. */}
+          <View style={styles.sendSlot}>
+            {micState !== 'blocked' && (
+              <Button
+                label={isLastScene ? '마치기' : '보내기'}
+                // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
+                size="lg"
+                disabled={reply === null}
+                style={styles.send}
+                onPress={handleSend}
+              />
+            )}
+          </View>
         </View>
       </View>
     </Screen>
@@ -274,6 +279,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingTop: spacing.lg,
+  },
+  sendSlot: {
+    height: hitSize.min, // 보내기 버튼(lg) 높이
+    justifyContent: 'center',
   },
   send: {
     width: 159, // 디자인 실측

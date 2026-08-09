@@ -133,7 +133,9 @@ export function StoryActivityScreen(): React.JSX.Element {
                     key={card.id}
                     card={card}
                     order={index === -1 ? null : index + 1}
-                    onPress={() => toggle(card.id)}
+                    // 맞힌 뒤에는 못 누르게 막는다. 결과를 보다가 무심코 카드를
+                    // 누르면 정답 화면이 통째로 사라져 처음부터 다시 놓아야 한다.
+                    onPress={result === 'correct' ? undefined : () => toggle(card.id)}
                   />
                 );
               })}
@@ -169,7 +171,7 @@ export function StoryActivityScreen(): React.JSX.Element {
               onPress={() => router.replace({ pathname: '/story/[id]/retell', params: { id } })}
             />
           ) : result === 'wrong' ? (
-            <Button label="다시 놓아보기" size="xl" onPress={retry} />
+            <Button label="다시 놓아보기" size="xl" style={styles.retryCta} onPress={retry} />
           ) : (
             <Button
               label="다 놓았어요"
@@ -247,10 +249,17 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
   },
+  // Button 의 기본값이 alignSelf:'flex-start' 라 부모의 alignItems 만으로는
+  // 가운데로 오지 않는다. 버튼마다 직접 지정해야 한다.
   cta: {
     width: 175, // 디자인 실측
+    alignSelf: 'center',
   },
   wideCta: {
     width: 400, // 디자인 실측
+    alignSelf: 'center',
+  },
+  retryCta: {
+    alignSelf: 'center',
   },
 });

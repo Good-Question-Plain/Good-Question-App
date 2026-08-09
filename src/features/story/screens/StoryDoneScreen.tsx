@@ -31,6 +31,7 @@ export function StoryDoneScreen(): React.JSX.Element {
           <Button
             label="이야기 보러 가기"
             size="lg"
+            style={styles.centered}
             onPress={() => router.replace('/(tabs)/story')}
           />
         </View>
@@ -139,6 +140,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  // Button 은 기본이 alignSelf:'flex-start' 라 세로 스택 안에서는 직접 가운데로 보낸다.
+  centered: {
+    alignSelf: 'center',
   },
   actions: {
     flexDirection: 'row',

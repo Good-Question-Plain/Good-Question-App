@@ -41,7 +41,9 @@ export function StoryRetellScreen(): React.JSX.Element {
   const backButton = (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel="앞 활동으로"
+      // 활동 사이 이동은 replace 라 뒤로가기는 앞 활동이 아니라 이야기 상세로 간다.
+      // 이미 맞힌 순서 맞추기를 다시 시키는 것보다 이쪽이 낫다.
+      accessibilityLabel="활동 그만두기"
       onPress={() => router.back()}
       scaleTo={0.94}
       hitSlop={hitSlopFor(24)}
@@ -90,7 +92,6 @@ export function StoryRetellScreen(): React.JSX.Element {
               label="완료"
               // 디자인은 h38 인데 아이가 누르는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
               size="lg"
-              style={styles.done}
               onPress={() => router.replace({ pathname: '/story/[id]/done', params: { id } })}
             />
           </View>
@@ -191,9 +192,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xl,
-  },
-  done: {
-    width: 72,
   },
   stage: {
     flexDirection: 'row',
