@@ -21,6 +21,7 @@ export { default as SpeakerIcon } from '@assets/icons/speaker.svg';
 export { default as HeartDetailIcon } from '@assets/icons/heart-detail.svg';
 export { default as PencilIcon } from '@assets/icons/pencil.svg';
 export { default as ChevronRightIcon } from '@assets/icons/chevron-right.svg';
+export { default as ChevronDownIcon } from '@assets/icons/chevron-down.svg';
 export { default as ReportIcon } from '@assets/icons/report.svg';
 export { default as SettingsIcon } from '@assets/icons/settings.svg';
 export { default as HelpIcon } from '@assets/icons/help.svg';

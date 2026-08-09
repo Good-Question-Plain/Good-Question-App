@@ -5,6 +5,7 @@ export { AVATARS, findAvatar, type AvatarDef, type AvatarId } from './avatars';
 export { BottomTabBar, TABS, type BottomTabBarProps, type TabKey } from './BottomTabBar';
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
+export { ChildSwitcher, type ChildSwitcherProps } from './ChildSwitcher';
 export { Chip, type ChipProps } from './Chip';
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
@@ -18,6 +19,7 @@ export {
   CelebrateIcon,
   CheckCircleIcon,
   CheckIcon,
+  ChevronDownIcon,
   ChevronRightIcon,
   HeartDetailIcon,
   HeartFillIcon,

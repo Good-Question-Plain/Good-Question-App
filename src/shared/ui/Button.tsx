@@ -7,13 +7,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, hitSize, radius, spacing } from '@/shared/theme';
+import { colors, hitSize, radius, spacing, type TypographyVariant } from '@/shared/theme';
 
 import { PressableScale } from './PressableScale';
 import { Text } from './Text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'md' | 'lg';
+type Size = 'md' | 'lg' | 'xl';
 
 export interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> {
   label: string;
@@ -68,7 +68,7 @@ export function Button({
     >
       {/* 스피너가 떠도 버튼 폭이 흔들리지 않도록 라벨은 자리를 유지한 채 투명하게 둔다. */}
       <Text
-        variant={size === 'md' ? 'button' : 'buttonSmall'}
+        variant={labelVariant[size]}
         color={isDisabled ? palette.labelDisabled : palette.label}
         style={loading && styles.hidden}
       >
@@ -155,8 +155,15 @@ const styles = StyleSheet.create({
   },
 });
 
+/** 크기가 커질수록 라벨도 커진다. `lg` 가 `md` 보다 작은 건 디자인이 그렇다(모달 하단 버튼). */
+const labelVariant = {
+  md: 'button',
+  lg: 'buttonSmall',
+  xl: 'buttonLarge',
+} as const satisfies Record<Size, TypographyVariant>;
+
 const sizeStyles = StyleSheet.create({
-  // 디자인 실측: 로그인 화면의 기본 버튼 h=45, 모달 하단 버튼 h=48.
+  // 디자인 실측: 로그인 화면의 기본 버튼 h=45, 모달 하단 버튼 h=48, 홈 "이어하기" h=49.
   // 45 는 터치 권장치(48)보다 살짝 낮지만 버튼 폭이 넓어 실사용에 문제없다.
   md: {
     height: 45,
@@ -164,6 +171,10 @@ const sizeStyles = StyleSheet.create({
   },
   lg: {
     height: hitSize.min,
+    paddingHorizontal: spacing['3xl'],
+  },
+  xl: {
+    height: 49,
     paddingHorizontal: spacing['3xl'],
   },
 });

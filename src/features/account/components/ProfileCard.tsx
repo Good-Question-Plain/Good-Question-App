@@ -18,7 +18,7 @@ export interface ProfileCardProps {
  * 이름 + 보조 정보 + 수정 버튼으로 이뤄진 카드.
  *
  * 마이페이지의 보호자 카드와 아이 카드가 같은 구성이라 하나로 묶었다.
- * 크기와 배경만 variant 로 나뉜다 (디자인 118:291).
+ * 크기와 배경만 variant 로 나뉜다 (디자인 234:567).
  */
 export function ProfileCard({
   name,

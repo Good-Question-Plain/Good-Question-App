@@ -31,14 +31,21 @@ export interface Story {
   characters?: readonly string[];
 }
 
-/**
- * 백엔드 API 가 붙기 전까지 화면 확인용으로 쓰는 임시 데이터.
- * 제목·시간·태그 모두 디자인에 적힌 값 그대로다.
- */
+/** 아이가 읽다 만 이야기. 실제로는 아이별 학습 기록에서 온다. */
+export interface StoryProgress {
+  storyId: string;
+  /** 진행률 0~1 */
+  ratio: number;
+}
+
 export function findStory(id: string): Story | undefined {
   return MOCK_STORIES.find((story) => story.id === id);
 }
 
+/**
+ * 백엔드 API 가 붙기 전까지 화면 확인용으로 쓰는 임시 데이터.
+ * 제목·시간·태그 모두 디자인에 적힌 값 그대로다.
+ */
 export const MOCK_STORIES: readonly Story[] = [
   { id: '1', title: '너구리의 도토리', minutes: 14, tag: '자연', Icon: Raccoon },
   { id: '2', title: '곰의 겨울잠', minutes: 12, tag: '자연', Icon: BearSleep },
@@ -59,3 +66,6 @@ export const MOCK_STORIES: readonly Story[] = [
   { id: '5', title: '피터팬', minutes: 20, tag: '모험', Icon: PeterPan },
   { id: '6', title: '오즈의 마법사', minutes: 22, tag: '상상', Icon: Oz },
 ] as const;
+
+/** 홈의 "이어하기" 자리에 쓰는 임시 진행 상태. 디자인(78:184)의 값 그대로다. */
+export const MOCK_PROGRESS: StoryProgress = { storyId: '1', ratio: 0.45 };

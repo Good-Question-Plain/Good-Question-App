@@ -37,10 +37,14 @@ export const typography = {
   label: { fontFamily: fontFamily.semiBold, fontSize: 16, lineHeight: 24, letterSpacing: 0.1 },
   /** 본문 — 16/Regular */
   body: { fontFamily: fontFamily.regular, fontSize: 16, lineHeight: 24 },
+  /** 큰 본문 (홈 인사말 아래 서브카피) — 20/Regular */
+  bodyLarge: { fontFamily: fontFamily.regular, fontSize: 20, lineHeight: 24 },
   /** 버튼 라벨 — 16/Bold */
   button: { fontFamily: fontFamily.bold, fontSize: 16, lineHeight: 24 },
   /** 작은 버튼 라벨 — 15/Bold */
   buttonSmall: { fontFamily: fontFamily.bold, fontSize: 15, lineHeight: 22 },
+  /** 큰 버튼 라벨 (홈 "이어하기") — 20/Bold */
+  buttonLarge: { fontFamily: fontFamily.bold, fontSize: 20, lineHeight: 27 },
   /** 화면 대제목 (탭 화면) — 32/Bold */
   display: { fontFamily: fontFamily.bold, fontSize: 32, lineHeight: 42 },
   /** 단어장 카드의 단어 — 24/Bold */

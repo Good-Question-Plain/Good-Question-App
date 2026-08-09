@@ -1,6 +1,6 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/shared/theme';
+import { colors, radius, spacing, type TypographyVariant } from '@/shared/theme';
 
 import { PressableScale } from './PressableScale';
 import { Text } from './Text';
@@ -10,8 +10,11 @@ export interface ChipProps {
   selected?: boolean;
   /** 누를 수 없는 표시용 칩(이야기 카드의 태그 등)일 때는 비워둔다. */
   onPress?: () => void;
-  /** 카드 안에 들어가는 작은 태그 모양. 높이와 모서리가 더 작다. */
-  size?: 'md' | 'sm';
+  /**
+   * `md` 가 기본(카테고리 필터), `sm` 은 카드 안 작은 태그,
+   * `lg` 는 홈 추천 카드처럼 글자가 큰 태그다.
+   */
+  size?: 'md' | 'sm' | 'lg';
   style?: ViewStyle;
 }
 
@@ -28,10 +31,7 @@ export function Chip({
   style,
 }: ChipProps): React.JSX.Element {
   const content = (
-    <Text
-      variant={size === 'md' ? 'chip' : 'footnote'}
-      color={selected ? 'textInverse' : 'primaryTextDeep'}
-    >
+    <Text variant={labelVariant[size]} color={selected ? 'textInverse' : 'primaryTextDeep'}>
       {label}
     </Text>
   );
@@ -73,6 +73,12 @@ const styles = StyleSheet.create({
   },
 });
 
+const labelVariant = {
+  md: 'chip',
+  sm: 'footnote',
+  lg: 'label',
+} as const satisfies Record<NonNullable<ChipProps['size']>, TypographyVariant>;
+
 const sizeStyles = StyleSheet.create({
   md: {
     height: 32, // 디자인 실측
@@ -83,5 +89,10 @@ const sizeStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 3, // 디자인 실측
     borderRadius: radius.xs,
+  },
+  lg: {
+    paddingHorizontal: 14, // 디자인 실측
+    paddingVertical: 6, // 디자인 실측
+    borderRadius: radius.md,
   },
 });

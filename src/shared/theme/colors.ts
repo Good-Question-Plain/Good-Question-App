@@ -91,6 +91,8 @@ export const colors = {
   primaryTextDeep: palette.primary700,
   /** 선택 가능한 칩·아바타의 옅은 주황 배경 */
   primarySelected: palette.primary150,
+  /** `primarySelected` 위에 한 단계 더 얹는 배경 (홈 추천 카드의 썸네일·태그) */
+  primaryAccent: palette.primary200,
   /** 장식용 점 (회원가입 완료 화면) */
   decorLight: palette.primary200,
   decorMid: palette.primary250,

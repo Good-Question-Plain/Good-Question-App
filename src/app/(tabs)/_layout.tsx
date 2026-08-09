@@ -11,8 +11,6 @@ import { BottomTabBar, TABS, type TabKey } from '@/shared/ui';
  * 기본 탭 바 대신 디자인의 알약형 `BottomTabBar` 를 쓴다. expo-router 가 주는
  * 상태(현재 라우트)를 우리 컴포넌트의 API(active/onSelect)로 옮기는 얇은
  * 어댑터가 아래 `renderTabBar` 다.
- *
- * 홈·마이페이지는 아직 디자인이 나오지 않아 라우트만 잡아두고 빈 화면을 둔다.
  */
 export default function TabsLayout(): React.JSX.Element {
   const insets = useSafeAreaInsets();
