@@ -1,5 +1,7 @@
 # Good Question App — 작업 규칙
 
+> 진행 상황과 다음 할 일은 [HANDOVER.md](HANDOVER.md) 를 먼저 볼 것.
+
 안드로이드 태블릿용 Expo(SDK 57) + expo-router 앱. 해커톤 프로젝트라 **속도와 가독성**이 둘 다 중요하다.
 
 ## Expo 문서
