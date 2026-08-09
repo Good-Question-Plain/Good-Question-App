@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { colors, radius, spacing, type ColorToken } from '@/shared/theme';
+import { colors, motion, radius, spacing, type ColorToken } from '@/shared/theme';
 import { MicIcon, PressableScale, Text } from '@/shared/ui';
 
 /**
@@ -100,7 +100,8 @@ function ListeningMic({ onPress }: { onPress?: () => void }): React.JSX.Element 
  */
 function ProcessingRing(): React.JSX.Element {
   const reducedMotion = useReducedMotion();
-  const spin = useRef(new Animated.Value(0)).current;
+  // Appear 와 같은 방식. useRef 로 잡으면 렌더 중 ref 접근이 된다.
+  const [spin] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -108,7 +109,7 @@ function ProcessingRing(): React.JSX.Element {
     const animation = Animated.loop(
       Animated.timing(spin, {
         toValue: 1,
-        duration: 1200,
+        duration: motion.duration.spin,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
