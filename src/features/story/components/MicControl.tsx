@@ -1,81 +1,194 @@
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/shared/theme';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { colors, radius, spacing, type ColorToken } from '@/shared/theme';
 import { MicIcon, PressableScale, Text } from '@/shared/ui';
 
+/**
+ * 마이크가 가질 수 있는 상태. 디자인에 별도 가이드 프레임(86:448)이 있다.
+ *
+ * `blocked` 만 그 가이드에 없고 이야기 도입 화면(86:410)에만 나온다 —
+ * "아직 말할 차례가 아니에요" 는 처리 중(`processing`)과 다른 회색을 쓴다.
+ */
+export type MicState = 'blocked' | 'ready' | 'listening' | 'processing';
+
 export interface MicControlProps {
-  /**
-   * `waiting` 은 아직 아이 차례가 아닌 상태(디자인 86:410),
-   * `listening` 은 아이 말을 받는 상태(디자인 176:747)다.
-   */
-  state: 'waiting' | 'listening';
+  state: MicState;
+  /** `ready` / `listening` 에서만 눌린다. */
   onPress?: () => void;
 }
 
 /**
- * 화면 아래 가운데의 큰 마이크.
+ * 화면 아래 가운데의 큰 마이크 (Figma 86:448 가이드 / 86:410 / 161:1158).
  *
- * 아이가 "지금 내가 말해도 되는지"를 이것만 보고 알 수 있어야 해서, 상태에 따라
- * 크기·색·주변 고리가 전부 달라진다. 회색 원 하나면 못 누르는 상태다.
+ * 아이가 "지금 내가 말해도 되는지"를 이것만 보고 알아야 해서 상태마다 색·크기·
+ * 주변 고리가 전부 다르다. 글을 못 읽는 아이도 색으로 구분할 수 있어야 한다.
  */
 export function MicControl({ state, onPress }: MicControlProps): React.JSX.Element {
-  if (state === 'waiting') {
-    return (
-      <View style={styles.column}>
-        <View style={styles.waitingButton}>
-          <MicIcon width={34} height={34} color={colors.textInverse} />
-        </View>
-        {/* 디자인은 "아니예요" 지만 맞춤법이 틀렸다. 아이가 글을 배우는 앱이라 고쳤다. */}
-        <Text variant="label" color="textStrong" align="center">
-          아직 말할 차례가 아니에요
-        </Text>
-      </View>
-    );
-  }
+  const { label, color } = LABELS[state];
 
   return (
     <View style={styles.column}>
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel="말하기"
-        onPress={onPress}
-        style={styles.outerRing}
-      >
-        <View style={styles.innerRing}>
-          <View style={styles.listeningButton}>
-            <MicIcon width={29} height={29} color={colors.textInverse} />
-          </View>
-        </View>
-      </PressableScale>
-      <Text variant="captionSmallStrong" color="primaryTextDeep" align="center">
-        듣고 있어요
+      {state === 'listening' ? (
+        <ListeningMic onPress={onPress} />
+      ) : (
+        <SolidMic state={state} onPress={onPress} />
+      )}
+      <Text variant="labelSmall" color={color} align="center">
+        {label}
       </Text>
     </View>
   );
 }
 
-// 전부 디자인 실측. 고리는 바깥 117 → 안쪽 93 → 버튼 69 순으로 겹친다.
-const OUTER = 117;
-const INNER = 93;
-const BUTTON = 69;
-const WAITING = 96;
+/** 고리 없이 원 하나로 그려지는 상태들. 색만 다르다. */
+function SolidMic({
+  state,
+  onPress,
+}: {
+  state: Exclude<MicState, 'listening'>;
+  onPress?: () => void;
+}): React.JSX.Element {
+  const circle = (
+    <View style={[styles.solidButton, { backgroundColor: SOLID_BACKGROUND[state] }]}>
+      <MicIcon width={SOLID_ICON} height={SOLID_ICON} color={colors.textInverse} />
+    </View>
+  );
+
+  if (state === 'processing') {
+    return (
+      <View style={styles.processingWrap}>
+        <ProcessingRing />
+        {circle}
+      </View>
+    );
+  }
+
+  if (state === 'blocked') return circle;
+
+  return (
+    <PressableScale accessibilityRole="button" accessibilityLabel="말하기" onPress={onPress}>
+      {circle}
+    </PressableScale>
+  );
+}
+
+/** 듣는 중. 버튼이 작아지고 옅은 고리 두 겹이 감싼다 (디자인 176:747). */
+function ListeningMic({ onPress }: { onPress?: () => void }): React.JSX.Element {
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel="말 그만하기"
+      onPress={onPress}
+      style={styles.outerRing}
+    >
+      <View style={styles.innerRing}>
+        <View style={styles.listeningButton}>
+          <MicIcon width={LISTENING_ICON} height={LISTENING_ICON} color={colors.textInverse} />
+        </View>
+      </View>
+    </PressableScale>
+  );
+}
+
+/**
+ * 정리 중임을 알리는 회전 고리 (디자인 86:477).
+ *
+ * 디자인은 원의 일부만 그려진 호를 기울여 둔 모양이다. 테두리 네 변 중 두 변만
+ * 색을 넣으면 같은 호가 나온다 — 에셋으로 뽑으면 회전이 안 붙는다.
+ */
+function ProcessingRing(): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const animation = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+
+    return () => animation.stop();
+  }, [reducedMotion, spin]);
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.processingRing,
+        {
+          transform: [
+            {
+              rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }),
+            },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+const LABELS: Record<MicState, { label: string; color: ColorToken }> = {
+  // 도입 화면(86:410)의 문구. 디자인은 "아니예요" 지만 맞춤법이 틀렸다 —
+  // 아이가 글을 배우는 앱이라 고쳤다.
+  blocked: { label: '아직 말할 차례가 아니에요', color: 'textStrong' },
+  ready: { label: '말할 준비 완료', color: 'text' },
+  listening: { label: '듣고 있어요', color: 'primaryText' },
+  processing: { label: '말한 내용을 정리하고 있어요', color: 'text' },
+};
+
+const SOLID_BACKGROUND: Record<Exclude<MicState, 'listening'>, string> = {
+  blocked: colors.surfaceInactive,
+  ready: colors.primaryReady,
+  processing: colors.surfaceBusy,
+};
+
+// 전부 디자인 실측. 고리가 붙는 `listening` 만 버튼이 작아지고, 나머지는 96 이다.
+const SOLID_SIZE = 96;
+const SOLID_ICON = 34;
+const OUTER_RING = 117;
+const INNER_RING = 93;
+const LISTENING_SIZE = 69;
+const LISTENING_ICON = 29;
+const PROCESSING_RING = 108;
 
 const styles = StyleSheet.create({
   column: {
     alignItems: 'center',
     gap: spacing.md,
   },
-  waitingButton: {
-    width: WAITING,
-    height: WAITING,
+  solidButton: {
+    width: SOLID_SIZE,
+    height: SOLID_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    backgroundColor: colors.surfaceInactive,
+  },
+  processingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingRing: {
+    position: 'absolute',
+    width: PROCESSING_RING,
+    height: PROCESSING_RING,
+    borderWidth: 4, // 디자인 실측
+    borderRadius: radius.full,
+    borderColor: colors.textMuted,
+    // 네 변 중 두 변을 비워 호를 만든다.
+    borderTopColor: 'transparent',
+    borderLeftColor: 'transparent',
   },
   outerRing: {
-    width: OUTER,
-    height: OUTER,
+    width: OUTER_RING,
+    height: OUTER_RING,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -84,8 +197,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 194, 102, 0.49)',
   },
   innerRing: {
-    width: INNER,
-    height: INNER,
+    width: INNER_RING,
+    height: INNER_RING,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -93,8 +206,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 146, 0, 0.5)',
   },
   listeningButton: {
-    width: BUTTON,
-    height: BUTTON,
+    width: LISTENING_SIZE,
+    height: LISTENING_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,

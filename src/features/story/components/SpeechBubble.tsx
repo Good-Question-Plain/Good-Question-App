@@ -41,25 +41,40 @@ function badgeInitial(speaker: string): string {
 
 export interface ChildBubbleProps {
   text: string;
-  /** 아직 받아 적는 중이면 "너의 말을 듣고 있어" 표시가 옆에 붙는다. */
+  /**
+   * 받아 적는 중이라 아직 확정되지 않은 말이면 "너의 말을 듣고 있어" 가 옆에 붙는다.
+   * 실시간 전사가 붙기 전까지는 `ListeningHint` 를 따로 쓴다.
+   */
   pending?: boolean;
 }
 
-/** 아이가 한 말. 오른쪽에 붙고 배경이 주황이다 (Figma 212:264). */
+/** 아이가 한 말. 오른쪽에 붙고 배경이 주황이다 (Figma 212:229). */
 export function ChildBubble({ text, pending = false }: ChildBubbleProps): React.JSX.Element {
   return (
     <View style={styles.childRow}>
-      {pending && (
-        <View style={styles.pending}>
-          <ListeningDotsIcon width={15} height={9} color={colors.primaryTextDeepest} />
-          <Text variant="captionSmallStrong" color="primaryTextDeepest">
-            너의 말을 듣고 있어
-          </Text>
-        </View>
-      )}
+      {pending && <ListeningHint />}
       <View style={styles.childBubble}>
         <Text variant="caption" color="primaryTextDeep" style={styles.childText}>
           {text}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * 아이 말을 받는 중이라는 표시 (Figma 216:276).
+ *
+ * 디자인에서는 실시간으로 받아 적힌 말풍선 옆에 붙어 있다. 아직 전사가 없을
+ * 때는 이것만 오른쪽에 놓아, 마이크가 켜져 있다는 걸 대화 흐름에서도 보여준다.
+ */
+export function ListeningHint(): React.JSX.Element {
+  return (
+    <View style={styles.hintRow}>
+      <View style={styles.pending}>
+        <ListeningDotsIcon width={15} height={9} color={colors.primaryTextDeepest} />
+        <Text variant="captionSmallStrong" color="primaryTextDeepest">
+          너의 말을 듣고 있어
         </Text>
       </View>
     </View>
@@ -88,6 +103,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: spacing.sm,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   pending: {
     flexDirection: 'row',

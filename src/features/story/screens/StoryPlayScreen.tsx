@@ -13,9 +13,9 @@ import {
   Text,
 } from '@/shared/ui';
 
-import { MicControl } from '../components/MicControl';
+import { MicControl, type MicState } from '../components/MicControl';
 import { ScenePanel } from '../components/ScenePanel';
-import { CharacterBubble, ChildBubble } from '../components/SpeechBubble';
+import { CharacterBubble, ChildBubble, ListeningHint } from '../components/SpeechBubble';
 import { findScript } from '../model/script';
 import { findStory } from '../model/types';
 
@@ -25,6 +25,13 @@ import { findStory } from '../model/types';
  * TODO: TTS 를 붙이면 이 타이머 대신 재생 완료 콜백에서 아이 차례로 넘긴다.
  */
 const NARRATION_MS = 2500;
+
+/**
+ * 아이 말을 받아 적는 데 걸린다고 가정하는 시간.
+ *
+ * TODO: STT 를 붙이면 인식 완료 콜백으로 바꾼다.
+ */
+const TRANSCRIBE_MS = 900;
 
 /**
  * 배경 그림 위에 글을 얹으려면 그림을 죽여야 한다. 디자인 실측(40%).
@@ -38,15 +45,16 @@ const BACKDROP_OPACITY = 0.4;
  */
 const SCENE_BACKGROUND = require('@assets/scenes/hanok-yard.jpg') as number;
 
-type Phase = 'narrating' | 'listening';
-
 /**
  * 이야기 전개 및 대화 (Figma 86:410 / 161:1158 / 216:277).
  *
- * 세 개의 시안은 같은 화면의 서로 다른 순간이라 한 화면으로 합쳤다.
- * - `narrating` : 나레이션이 나오는 중. 마이크는 회색이고 누를 수 없다 (86:410)
- * - `listening` : 아이 차례. 마이크에 고리가 생기고 보내기가 나온다 (161:1158)
- * - 미션이 있는 장면이면 줄거리 아래에 미션 패널이 하나 더 붙는다 (216:277)
+ * 여러 시안이 같은 화면의 서로 다른 순간이라 한 화면으로 합쳤다. 마이크 상태는
+ * 디자인의 가이드 프레임(86:448)이 정의한 네 가지를 그대로 따른다.
+ *
+ * 나레이션 재생(`blocked`) → 아이 차례(`ready`) → 녹음(`listening`)
+ * → 받아쓰기(`processing`) → 답변 확정 후 다시 `ready`, 보내기 활성.
+ *
+ * 미션이 있는 장면이면 줄거리 아래에 미션 패널이 하나 더 붙는다 (216:277).
  */
 export function StoryPlayScreen(): React.JSX.Element {
   const router = useRouter();
@@ -55,20 +63,32 @@ export function StoryPlayScreen(): React.JSX.Element {
   const script = findScript(id);
 
   const [sceneIndex, setSceneIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>('narrating');
+  const [micState, setMicState] = useState<MicState>('blocked');
   const [reply, setReply] = useState<string | null>(null);
 
   const scene = script?.scenes[sceneIndex];
 
   // 나레이션이 끝나면 아이 차례로 넘어간다. 장면이 바뀌면 `handleSend` 가
-  // 다시 'narrating' 으로 돌려놓으므로 여기서 타이머가 새로 걸린다.
+  // 다시 'blocked' 로 돌려놓으므로 여기서 타이머가 새로 걸린다.
   useEffect(() => {
-    if (phase !== 'narrating' || scene === undefined) return;
+    if (micState !== 'blocked' || scene === undefined) return;
 
-    const timer = setTimeout(() => setPhase('listening'), NARRATION_MS);
+    const timer = setTimeout(() => setMicState('ready'), NARRATION_MS);
 
     return () => clearTimeout(timer);
-  }, [phase, scene]);
+  }, [micState, scene]);
+
+  // 녹음을 멈추면 받아쓴 결과가 도착한다.
+  useEffect(() => {
+    if (micState !== 'processing' || scene === undefined) return;
+
+    const timer = setTimeout(() => {
+      setReply(scene.sampleReply);
+      setMicState('ready');
+    }, TRANSCRIBE_MS);
+
+    return () => clearTimeout(timer);
+  }, [micState, scene]);
 
   const backButton = (
     <PressableScale
@@ -111,8 +131,18 @@ export function StoryPlayScreen(): React.JSX.Element {
       return;
     }
     setSceneIndex((index) => index + 1);
-    setPhase('narrating');
+    setMicState('blocked');
     setReply(null);
+  };
+
+  /** 마이크는 아이 차례일 때 녹음을 시작하고, 녹음 중이면 멈춘다. */
+  const handleMicPress = (): void => {
+    if (micState === 'ready') {
+      setReply(null);
+      setMicState('listening');
+      return;
+    }
+    if (micState === 'listening') setMicState('processing');
   };
 
   return (
@@ -158,10 +188,11 @@ export function StoryPlayScreen(): React.JSX.Element {
               }}
             />
 
-            {phase === 'listening' && (
+            {micState !== 'blocked' && (
               <View style={styles.chat}>
                 <CharacterBubble speaker={scene.question.speaker} text={scene.question.text} />
-                {reply !== null && <ChildBubble text={reply} pending />}
+                {micState === 'listening' && <ListeningHint />}
+                {reply !== null && <ChildBubble text={reply} />}
               </View>
             )}
 
@@ -172,12 +203,8 @@ export function StoryPlayScreen(): React.JSX.Element {
         </ScrollView>
 
         <View style={styles.micArea}>
-          <MicControl
-            state={phase === 'narrating' ? 'waiting' : 'listening'}
-            // TODO: STT 연동. 지금은 누르면 대본에 적힌 예시 답변이 대신 나온다.
-            onPress={() => setReply(scene.sampleReply)}
-          />
-          {phase === 'listening' && (
+          <MicControl state={micState} onPress={handleMicPress} />
+          {micState !== 'blocked' && (
             <Button
               label={isLastScene ? '마치기' : '보내기'}
               // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.

@@ -64,8 +64,10 @@ export const colors = {
   surfaceMuted: palette.neutral200,
   /** 배경 그림 위에 글을 얹는 반투명하지 않은 패널 (대화 화면의 줄거리·미션) */
   surfaceSubtle: palette.neutral100,
-  /** 아직 쓸 수 없는 큰 컨트롤의 배경 (대화 화면의 마이크) */
+  /** 아직 쓸 수 없는 큰 컨트롤의 배경 (대화 화면의 "아직 말할 차례가 아니에요") */
   surfaceInactive: palette.neutral500,
+  /** 처리 중이라 잠깐 못 쓰는 큰 컨트롤의 배경 (대화 화면의 "정리하고 있어요") */
+  surfaceBusy: palette.neutral400,
 
   // 텍스트
   text: palette.neutral900,
@@ -100,6 +102,8 @@ export const colors = {
   primarySelected: palette.primary150,
   /** `primarySelected` 위에 한 단계 더 얹는 배경 (홈 추천 카드의 썸네일·태그) */
   primaryAccent: palette.primary200,
+  /** 누를 수는 있지만 아직 동작 중은 아닌 큰 컨트롤 (대화 화면의 "말할 준비 완료" 마이크) */
+  primaryReady: palette.primary250,
   /** 장식용 점 (회원가입 완료 화면) */
   decorLight: palette.primary200,
   decorMid: palette.primary250,
