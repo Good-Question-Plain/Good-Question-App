@@ -39,6 +39,13 @@ export { default as SparkleIcon } from '@assets/icons/sparkle.svg';
 /** 아이 말을 받아 적는 중이라는 표시. 세 점이 비스듬히 올라간 모양이다. */
 export { default as ListeningDotsIcon } from '@assets/icons/listening-dots.svg';
 export { default as HeartLineIcon } from '@assets/icons/heart-line.svg';
+/**
+ * 리포트의 이야기 줄에 붙는 사람 모양 뱃지 (252:204).
+ *
+ * 하단 탭의 마이페이지와 같은 벡터지만 머리/몸이 서로 다른 색으로 칠해져 있어
+ * `currentColor` 한 개로 표현할 수 없다. 그래서 별도 에셋으로 뒀다.
+ */
+export { default as ProfileFillIcon } from '@assets/icons/profile-fill.svg';
 
 export { default as TabHomeIcon } from '@assets/icons/tab-home.svg';
 export { default as TabStoryIcon } from '@assets/icons/tab-story.svg';

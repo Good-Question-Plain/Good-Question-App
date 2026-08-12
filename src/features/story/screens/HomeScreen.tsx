@@ -3,7 +3,14 @@ import { StyleSheet, View } from 'react-native';
 
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { spacing } from '@/shared/theme';
-import { Appear, ChildSwitcher, EmptyState, Screen, Text } from '@/shared/ui';
+import {
+  Appear,
+  ChildSwitcher,
+  type ChildSwitcherOption,
+  EmptyState,
+  Screen,
+  Text,
+} from '@/shared/ui';
 
 import { ContinueCard } from '../components/ContinueCard';
 import { RecommendedStoryCard } from '../components/RecommendedStoryCard';
@@ -15,7 +22,9 @@ const RECOMMENDATION_COUNT = 3;
 export interface HomeScreenProps {
   /** 지금 쓰는 아이 이름. 인사말과 전환 알약에 쓴다. */
   childName: string;
-  onSwitchChild: () => void;
+  /** 전환 알약을 펼쳤을 때 고를 수 있는 아이들 */
+  childOptions: readonly ChildSwitcherOption[];
+  onSelectChild: (id: string) => void;
 }
 
 /**
@@ -24,10 +33,14 @@ export interface HomeScreenProps {
  * 왼쪽은 읽다 만 이야기 하나, 오른쪽은 추천 세 편. 아이가 앱을 열자마자
  * "뭘 할지" 고민하지 않게 두 갈래만 준다.
  *
- * 아이 목록·전환 모달은 이 화면이 모른다 — story feature 가 child/account 를
- * 직접 가져오면 안 되므로 라우트에서 조립한다 (src/features/README.md).
+ * 아이 목록은 이 화면이 모른다 — story feature 가 child/account 를 직접 가져오면
+ * 안 되므로 라우트에서 받아온다 (src/features/README.md).
  */
-export function HomeScreen({ childName, onSwitchChild }: HomeScreenProps): React.JSX.Element {
+export function HomeScreen({
+  childName,
+  childOptions,
+  onSelectChild,
+}: HomeScreenProps): React.JSX.Element {
   const router = useRouter();
   const { select } = useResponsive();
 
@@ -61,21 +74,21 @@ export function HomeScreen({ childName, onSwitchChild }: HomeScreenProps): React
               오늘은 어떤 이야기를 만나볼까?
             </Text>
           </View>
-          <ChildSwitcher name={childName} onPress={onSwitchChild} />
+          <ChildSwitcher name={childName} options={childOptions} onSelect={onSelectChild} />
         </Appear>
 
         <View style={[styles.body, { gap: columnGap }]}>
           {continueStory === undefined ? (
             // 아직 읽다 만 이야기가 없는 아이(첫 실행)에게는 카드가 아예 없다.
             // 디자인에 없는 상태라 문구는 직접 지었다.
-            <Appear delay={40} style={styles.column}>
+            <Appear delay={40} style={[styles.column, styles.continueColumn]}>
               <EmptyState
                 title="아직 읽던 이야기가 없어요"
                 description="오른쪽에서 마음에 드는 이야기를 골라볼까요?"
               />
             </Appear>
           ) : (
-            <Appear delay={40} style={styles.column}>
+            <Appear delay={40} style={[styles.column, styles.continueColumn]}>
               <ContinueCard
                 story={continueStory}
                 ratio={MOCK_PROGRESS.ratio}
@@ -84,7 +97,7 @@ export function HomeScreen({ childName, onSwitchChild }: HomeScreenProps): React
             </Appear>
           )}
 
-          <Appear delay={80} style={styles.column}>
+          <Appear delay={80} style={[styles.column, styles.recommendColumn]}>
             <Text variant="subtitle">추천 이야기</Text>
             <View style={styles.recommendations}>
               {recommended.map((story) => (
@@ -138,9 +151,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  // 두 칸은 균등이 아니다. 디자인 실측이 484 : 444 — 이어하기 카드가 조금 더 넓다.
+  // flex 를 실측값 그대로 주면 간격을 뺀 나머지가 같은 비율로 나뉜다.
   column: {
-    flex: 1,
     gap: spacing.md,
+  },
+  continueColumn: {
+    flex: 484,
+  },
+  recommendColumn: {
+    flex: 444,
   },
   recommendations: {
     flex: 1,

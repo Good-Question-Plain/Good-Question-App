@@ -31,12 +31,20 @@ export const typography = {
   subtitle: { fontFamily: fontFamily.semiBold, fontSize: 24, lineHeight: 26 },
   /** 단어 상세의 소제목 — 20/SemiBold */
   subheading: { fontFamily: fontFamily.semiBold, fontSize: 20, lineHeight: 28 },
+  /** 강조된 소제목 (리포트의 "오늘의 대표 발화") — 20/Bold */
+  subheadingBold: { fontFamily: fontFamily.bold, fontSize: 20, lineHeight: 28 },
   /** 섹션/모달 제목 — 17/SemiBold */
   heading: { fontFamily: fontFamily.semiBold, fontSize: 17, lineHeight: 24 },
+  /** 강조된 섹션 제목 (리포트 탭 카드의 "어휘") — 17/Bold */
+  headingBold: { fontFamily: fontFamily.bold, fontSize: 17, lineHeight: 24 },
   /** 입력 라벨 — 16/SemiBold, 자간 0.1 */
   label: { fontFamily: fontFamily.semiBold, fontSize: 16, lineHeight: 24, letterSpacing: 0.1 },
   /** 본문 — 16/Regular */
   body: { fontFamily: fontFamily.regular, fontSize: 16, lineHeight: 24 },
+  /** 강조된 본문 (리포트 카드의 제목) — 16/Bold */
+  bodyBold: { fontFamily: fontFamily.bold, fontSize: 16, lineHeight: 24 },
+  /** 작은 본문 (리포트의 인용문·대화 주제) — 14/Regular */
+  bodySmall: { fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 20 },
   /** 길게 읽는 본문 (활동 화면의 받아쓴 이야기) — 18/Regular */
   bodyMedium: { fontFamily: fontFamily.regular, fontSize: 18, lineHeight: 28.8 },
   /** 큰 본문 (홈 인사말 아래 서브카피) — 20/Regular */
@@ -49,7 +57,7 @@ export const typography = {
   buttonLarge: { fontFamily: fontFamily.bold, fontSize: 20, lineHeight: 27 },
   /** 화면 대제목 (탭 화면) — 32/Bold */
   display: { fontFamily: fontFamily.bold, fontSize: 32, lineHeight: 42 },
-  /** 단어장 카드의 단어 — 24/Bold */
+  /** 24/Bold — 단어장 카드의 단어, 리포트의 화면 제목과 섹션 제목 */
   word: { fontFamily: fontFamily.bold, fontSize: 24, lineHeight: 32 },
   /** 원형 뱃지 안 글자(큰 것) — 14/Bold */
   badgeLarge: { fontFamily: fontFamily.bold, fontSize: 14, lineHeight: 18 },

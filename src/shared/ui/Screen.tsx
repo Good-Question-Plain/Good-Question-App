@@ -17,6 +17,13 @@ export interface ScreenProps {
   backdrop?: ReactNode;
   /** 내용이 길어 스크롤이 필요한 화면에서 켠다. */
   scrollable?: boolean;
+  /**
+   * 화면 바탕색. 기본은 앱 공통 배경(#F8F9FA)이다.
+   *
+   * 디자인이 흰 바탕으로 그려진 화면(보호자 리포트 252:193)에서만 `surface` 로
+   * 바꾼다. 그 화면은 안쪽 정보 블록이 #F8F9FA 라, 바탕까지 같은 색이면 블록이 사라진다.
+   */
+  background?: 'background' | 'surface';
   /** 좌우 여백을 직접 제어하고 싶을 때(예: 풀블리드 리스트) 끈다. */
   padded?: boolean;
   /**
@@ -37,6 +44,7 @@ export function Screen({
   children,
   backdrop,
   scrollable = false,
+  background = 'background',
   padded = true,
   maxContentWidth = DESIGN_WIDTH,
   style,
@@ -45,7 +53,11 @@ export function Screen({
   const keyboardInset = useKeyboardInset();
   const { select } = useResponsive();
 
-  const horizontalPadding = padded ? select({ compact: spacing.lg, medium: spacing['2xl'] }) : 0;
+  // 디자인 기준 폭(1024)의 모든 프레임이 좌우 여백 24 로 그려져 있다. 좁아질수록
+  // 본문을 살리려고 여백을 줄인다.
+  const horizontalPadding = padded
+    ? select({ compact: spacing.lg, medium: spacing['2xl'], expanded: spacing['3xl'] })
+    : 0;
 
   const content = (
     <View
@@ -62,6 +74,8 @@ export function Screen({
     </View>
   );
 
+  const root: ViewStyle = { flex: 1, backgroundColor: colors[background] };
+
   const frame: ViewStyle = {
     paddingTop: insets.top,
     // 키보드가 올라오면 그만큼 아래를 비운다. edge-to-edge 환경에서는 adjustResize
@@ -75,7 +89,7 @@ export function Screen({
   if (scrollable) {
     return (
       <ScrollView
-        style={styles.root}
+        style={root}
         contentContainerStyle={[frame, styles.scrollContent]}
         keyboardShouldPersistTaps="handled"
       >
@@ -85,7 +99,7 @@ export function Screen({
   }
 
   return (
-    <View style={[styles.root, frame]}>
+    <View style={[root, frame]}>
       {backdrop !== undefined && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {backdrop}
@@ -97,10 +111,6 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   scrollContent: {
     flexGrow: 1,
   },

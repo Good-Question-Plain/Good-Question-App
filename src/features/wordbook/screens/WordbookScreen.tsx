@@ -20,8 +20,9 @@ import { groupByStory, MOCK_WORDS, type WordEntry } from '../model/types';
 const FILTERS = ['전체', '이야기별'] as const;
 type Filter = (typeof FILTERS)[number];
 
-/** 디자인 실측: 4열, 간격 16. */
+/** 디자인 실측: 4열, 카드 높이 279, 간격 16. */
 const COLUMNS = 4;
+const CARD_HEIGHT = 279;
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const rows: T[][] = [];
@@ -144,10 +145,12 @@ const styles = StyleSheet.create({
   groups: {
     gap: spacing.lg,
   },
+  // 카드 높이를 줄이 잡는다. 내용에 맡기면 단어 길이에 따라 칸마다 높이가 달라지고,
+  // 디자인(226x279)보다 한참 납작해진다.
   row: {
     flexDirection: 'row',
     gap: spacing.xl,
-    alignItems: 'flex-start',
+    height: CARD_HEIGHT,
   },
   cell: {
     flex: 1,

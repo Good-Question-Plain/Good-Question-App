@@ -5,7 +5,7 @@ export { AVATARS, findAvatar, type AvatarDef, type AvatarId } from './avatars';
 export { BottomTabBar, TABS, type BottomTabBarProps, type TabKey } from './BottomTabBar';
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
-export { ChildSwitcher, type ChildSwitcherProps } from './ChildSwitcher';
+export { ChildSwitcher, type ChildSwitcherOption, type ChildSwitcherProps } from './ChildSwitcher';
 export { Chip, type ChipProps } from './Chip';
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
@@ -31,6 +31,7 @@ export {
   MicIcon,
   PencilIcon,
   PlusIcon,
+  ProfileFillIcon,
   ReportIcon,
   SearchIcon,
   SettingsIcon,
@@ -41,6 +42,7 @@ export {
 } from './icons';
 export { Modal, type ModalProps } from './Modal';
 export { OtpInput, type OtpInputProps } from './OtpInput';
+export { PillTabs, type PillTabsProps } from './PillTabs';
 export { PressableScale, type PressableScaleProps } from './PressableScale';
 export { Screen, type ScreenProps } from './Screen';
 export { SegmentedTabs, type SegmentedTabsProps } from './SegmentedTabs';

@@ -63,7 +63,7 @@ export function MypageScreen({
 }: MypageScreenProps): React.JSX.Element {
   const router = useRouter();
   const [openModal, setOpenModal] = useState<OpenModal>(null);
-  const [, setGatedTarget] = useState<GatedTarget | null>(null);
+  const [gatedTarget, setGatedTarget] = useState<GatedTarget | null>(null);
 
   const close = (): void => setOpenModal(null);
 
@@ -85,7 +85,10 @@ export function MypageScreen({
 
   const handleGatePassed = (): void => {
     close();
-    // TODO: 리포트 / 계정 설정 화면 연결 (디자인 준비 중)
+    if (gatedTarget === 'report') {
+      router.push('/report');
+    }
+    // TODO: 계정 설정 화면 연결 (디자인 준비 중)
     setGatedTarget(null);
   };
 
@@ -230,7 +233,7 @@ const styles = StyleSheet.create({
   },
   childRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.lg, // 디자인 실측 (카드 사이만 12, 메뉴/카드의 세로 간격과 다르다)
   },
   childCell: {
     flex: 1,

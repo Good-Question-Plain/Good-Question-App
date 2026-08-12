@@ -21,6 +21,15 @@ export interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> 
   size?: Size;
   /** 눌린 동안 스피너를 보여주고 입력을 막는다. */
   loading?: boolean;
+  /**
+   * 비활성일 때의 색.
+   *
+   * `brand`(기본)는 옅은 주황이다 — 로그인의 "계속하기"처럼 입력만 채우면 바로
+   * 눌리는 버튼에 쓴다. `neutral`은 회색으로 내린다 — 리포트 페이저(287:273)처럼
+   * 지금 당장은 갈 곳이 없어 정말로 못 누르는 버튼에 쓴다. 주황으로 두면
+   * 눌리는 줄 알고 계속 누르게 된다.
+   */
+  disabledTone?: 'brand' | 'neutral';
   /** 가로를 꽉 채운다. 태블릿에서는 기본값(false)이 대체로 낫다. */
   fullWidth?: boolean;
   style?: ViewStyle;
@@ -31,6 +40,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  disabledTone = 'brand',
   fullWidth = false,
   disabled,
   style,
@@ -41,6 +51,9 @@ export function Button({
   const [pressed, setPressed] = useState(false);
   const isDisabled = disabled === true || loading;
   const palette = variantPalette[variant];
+  const disabledBackground =
+    disabledTone === 'neutral' ? colors.disabled : palette.backgroundDisabled;
+  const disabledLabel = disabledTone === 'neutral' ? 'disabledText' : palette.labelDisabled;
 
   return (
     <PressableScale
@@ -60,7 +73,7 @@ export function Button({
         sizeStyles[size],
         { backgroundColor: palette.background, borderColor: palette.border },
         pressed && !isDisabled && { backgroundColor: palette.backgroundPressed },
-        isDisabled && { backgroundColor: palette.backgroundDisabled, borderColor: 'transparent' },
+        isDisabled && { backgroundColor: disabledBackground, borderColor: 'transparent' },
         fullWidth && styles.fullWidth,
         style,
       ]}
@@ -69,7 +82,7 @@ export function Button({
       {/* 스피너가 떠도 버튼 폭이 흔들리지 않도록 라벨은 자리를 유지한 채 투명하게 둔다. */}
       <Text
         variant={labelVariant[size]}
-        color={isDisabled ? palette.labelDisabled : palette.label}
+        color={isDisabled ? disabledLabel : palette.label}
         style={loading && styles.hidden}
       >
         {label}

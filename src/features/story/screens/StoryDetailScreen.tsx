@@ -157,8 +157,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing['3xl'],
   },
+  // 홈과 같은 방식으로 실측 비율(524 : 428)을 flex 에 그대로 넣는다.
   thumbnailWrap: {
-    flex: 1.2,
+    flex: 524,
   },
   thumbnail: {
     height: 402, // 디자인 실측
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, // 디자인 실측
   },
   info: {
-    flex: 1,
+    flex: 428,
     gap: spacing['2xl'],
   },
   tags: {
@@ -195,5 +196,6 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.md,
+    height: 56, // 디자인 실측. Button 의 어느 size 보다 커서 직접 지정한다.
   },
 });

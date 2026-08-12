@@ -8,6 +8,7 @@ import {
   type ModalProps as RNModalProps,
 } from 'react-native';
 
+import { useKeyboardInset } from '@/shared/hooks/useKeyboardInset';
 import { colors, radius, shadow, spacing } from '@/shared/theme';
 
 import { Appear } from './Appear';
@@ -41,6 +42,8 @@ export function Modal({
   width = 480,
   cardStyle,
 }: ModalProps): React.JSX.Element {
+  const keyboardInset = useKeyboardInset();
+
   return (
     <RNModal
       visible={visible}
@@ -49,7 +52,12 @@ export function Modal({
       statusBarTranslucent
       onRequestClose={onRequestClose ?? onDismiss}
     >
-      <View style={styles.backdrop}>
+      {/*
+        키보드가 올라오면 그만큼 아래를 비워 카드를 위로 밀어올린다. edge-to-edge 라
+        키보드는 창을 밀지 않고 덮기만 해서, 이게 없으면 입력이 있는 모달(보호자 확인)의
+        인풋과 하단 버튼이 통째로 가려진다 — 태블릿 기기에서 실제로 확인했다.
+      */}
+      <View style={[styles.backdrop, keyboardInset > 0 && { paddingBottom: keyboardInset }]}>
         {/* 배경 탭 영역. 카드보다 뒤에 깔아 카드 내부 탭은 가로채지 않는다. */}
         {dismissOnBackdropPress && (
           <Pressable

@@ -48,6 +48,11 @@ const palette = {
   peach50: '#FFF8F0',
   peach150: '#FFE4CC',
 
+  // 리포트에서 "아이가 궁금해한 어휘" 칩에만 쓰이는 한 쌍. 주황 계열과 구분하려고
+  // 파란 톤을 썼다. 둘 다 Variable 미등록이고 다른 스케일과 이어지지 않는다.
+  blue50: '#E7F5FF',
+  brown900: '#4D2500',
+
   // 소셜 로그인 브랜드
   kakaoLogo: '#000000',
 } as const;
@@ -68,6 +73,8 @@ export const colors = {
   surfaceInactive: palette.neutral500,
   /** 처리 중이라 잠깐 못 쓰는 큰 컨트롤의 배경 (대화 화면의 "정리하고 있어요") */
   surfaceBusy: palette.neutral400,
+  /** 주황 계열과 구분해야 하는 보조 분류의 배경 (리포트의 "궁금해한 어휘" 칩) */
+  surfaceInfo: palette.blue50,
 
   // 텍스트
   text: palette.neutral900,
@@ -75,6 +82,8 @@ export const colors = {
   textMuted: palette.neutral600,
   textSubtle: palette.neutral500,
   textInverse: palette.neutral0,
+  /** `surfaceInfo` 위에 얹는 글자. 디자인이 파란 배경에 갈색 글자를 썼다(252:237). */
+  textInfo: palette.brown900,
   /** 입력 placeholder. 디자인상 #757575 인데 중립 스케일에 없는 단발성 값이다. */
   textPlaceholder: '#757575',
 

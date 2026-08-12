@@ -107,6 +107,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xl,
     paddingTop: spacing['3xl'],
+    // 이 화면만 본문이 한 겹 더 들어가 있다 (디자인 125:116 → 125:117 이 각각 24).
+    // 하단 탭 바는 바깥이라 그대로 24 에 남는다 — 시안이 그렇게 그려져 있다.
+    paddingHorizontal: spacing['3xl'],
   },
   categories: {
     gap: spacing.md,

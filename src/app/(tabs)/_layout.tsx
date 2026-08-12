@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DESIGN_WIDTH } from '@/shared/hooks/useResponsive';
 import { colors, spacing } from '@/shared/theme';
 import { BottomTabBar, TABS, type TabKey } from '@/shared/ui';
 
@@ -28,7 +29,9 @@ export default function TabsLayout(): React.JSX.Element {
           // 안드로이드 태블릿의 시스템 태스크바가 화면 아래를 덮는다.
           // 인셋만큼 띄우지 않으면 탭 라벨이 그 뒤로 숨는다(실기기에서 확인).
           <View style={[styles.tabBarWrap, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <BottomTabBar active={active} onSelect={(key) => navigation.navigate(key)} />
+            <View style={styles.tabBarInner}>
+              <BottomTabBar active={active} onSelect={(key) => navigation.navigate(key)} />
+            </View>
           </View>
         );
       }}
@@ -45,5 +48,12 @@ const styles = StyleSheet.create({
   tabBarWrap: {
     paddingHorizontal: spacing['3xl'],
     backgroundColor: colors.surface,
+  },
+  // 본문과 같은 상한으로 묶는다. 이게 없으면 1024dp 보다 넓은 태블릿에서 탭 바만
+  // 화면 끝까지 늘어나, 가운데 정렬된 본문보다 훨씬 넓어진다 (실기기에서 확인).
+  tabBarInner: {
+    width: '100%',
+    maxWidth: DESIGN_WIDTH,
+    alignSelf: 'center',
   },
 });
