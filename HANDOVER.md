@@ -1,4 +1,4 @@
-# 인수인계 (2026-08-14, 대화 화면 2단 재설계 반영 후 갱신)
+# 인수인계 (2026-08-15, API 명세 확인 후 갱신 — 다음은 백엔드 연동)
 
 작업 규칙은 [AGENTS.md](AGENTS.md), 실행 방법은 [README.md](README.md) 에 있다.
 이 문서는 **둘 중 어디에도 없는 것** — 지금까지의 판단과 다음에 할 일 — 만 담는다.
@@ -439,10 +439,85 @@ Figma 현재 지오메트리와 1:1로 다시 맞췄다.
   `am force-stop` 후 딥링크로 다시 띄운다.
 - 화면 확인은 `adb -s <serial> exec-out screencap -p > a.png`.
 
+## 백엔드 연동 (2026-08-15 시작 — 여기부터가 다음 작업이다)
+
+### 명세는 어디에 있나
+
+Notion **"굿퀘스천 API 명세서"** (`3bd5ac70-2736-80c7-a03c-c33263ec861f`).
+도메인별 인라인 데이터베이스 7개로 나뉘어 있고, 각 행이 엔드포인트 하나다.
+Notion MCP 로 읽는다 — 목록은 `query_data_sources`, 상세는 `fetch`.
+
+**중요: 데이터베이스의 `api path` 속성과 상세 페이지의 EndPoint 가 다르다.**
+속성엔 `/auth/sync-profile` 인데 상세 페이지엔 `/api/auth/sync-profile` 이다.
+**상세 페이지가 맞다고 봤다** — 활동 그룹은 속성에도 `/api/...` 가 들어 있어
+속성 쪽이 일부만 prefix 를 빠뜨린 것으로 보인다. 붙이기 전에 한 번 확인할 것.
+
+### 엔드포인트 전체 (23개)
+
+| 그룹                     | 엔드포인트                                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 인증 `/api/auth`         | `POST /sync-profile` · `POST /verify-password` · `DELETE /me`                                                                       |
+| 유저·자녀 `/api/users`   | `GET·PATCH /me` · `GET /mypage` · `GET·POST /me/children` · `PATCH /me/children/{child_id}` · `POST /profile-image/presigned-url`   |
+| 단어장 `/api/vocabulary` | `GET /` · `GET /{vocab_id}` · `POST·DELETE /{vocab_id}/save`                                                                        |
+| 메인·이야기              | `GET /api/main` · `GET /api/stories`                                                                                                |
+| 학습 `/api/progress`     | `POST /{story_id}/start` · `GET /active` · `GET /{story_id}` · `POST /{story_id}/steps/{step_index}` · `.../complete` · `.../speak` |
+| 활동 `/api/sessions`     | `GET /{session_id}/post-activity` · `POST .../submit` · `POST .../retell`                                                           |
+
+### 인증은 Supabase JWT 다 — 이게 제일 큰 제약
+
+명세의 권한 칸이 `SUPABASE_ONLY (Supabase JWT 검증만)` / `PARENT (부모 계정, DB
+프로필 등록 필요)` 로 되어 있다. **로그인은 서버가 아니라 Supabase 가 처리하고,
+우리 서버는 그 JWT 를 검증만 한다.** 따라서:
+
+- **이메일/비밀번호 로그인 API 가 명세에 없다.** 서버에 붙일 게 아니라
+  `@supabase/supabase-js` 로 직접 로그인해야 한다. 이메일/비밀번호와 소셜 로그인
+  **둘 다 쓴다**(사용자 확인 완료)
+- `POST /api/auth/sync-profile` 은 회원가입이 아니라 **Supabase 로그인 뒤 서버 DB 에
+  프로필을 만드는 단계**다. body `{ name }`, 성공 201, 이미 있으면 409
+- 소셜 로그인의 복귀 주소로 앞서 정리한 딥링크(`goodquestion://oauth`)를
+  **Supabase 콘솔의 Redirect URL 에 등록**해야 한다
+- 토큰은 `setAuthToken(token)` 한 번만 부르면 이후 요청에 `Bearer` 로 붙는다
+  (`shared/api/client.ts`). 지금은 메모리에만 있어서 앱을 끄면 날아간다 —
+  로그인 유지가 필요하면 AsyncStorage 로 옮긴다
+
+### 시작하기 전에 받아야 할 것 (Supabase)
+
+이거 없이는 로그인부터 막힌다.
+
+1. **Supabase Project URL** — `https://xxxxx.supabase.co`
+2. **anon (public) key** — 클라이언트에 넣는 공개 키. service_role 키는 절대 앱에 넣지 않는다
+3. **어떤 소셜 로그인을 켰는지** — Google / Kakao / Naver 중 무엇이며 Supabase 콘솔에
+   provider 가 실제로 활성화돼 있는지
+4. **Redirect URL 등록 여부** — `goodquestion://oauth` 가 Supabase 의 Redirect URLs 에
+   들어가 있는지
+5. **이메일 확인(Confirm email) 설정** — 켜져 있으면 가입 직후 로그인이 안 되므로
+   테스트 계정을 미리 확인 처리해두거나 꺼야 한다
+
+받으면 `.env` 에 `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` 로 넣고
+`.env.example` 에도 같은 키를 빈 값으로 추가한다.
+
+### 서버가 아직 대부분 미구현이다
+
+명세의 `BE 진행상황` 이 채워진 건 **"퀴즈 카드 받아오기"(`GET /api/sessions/{session_id}/post-activity`)
+하나뿐**이고 나머지는 비어 있다. **"로그인부터 순서대로"는 지금 막힌다.**
+
+그래서 이 순서를 제안한다.
+
+1. **공통 기반** — `/api` prefix 규칙 확정, Supabase 클라이언트 도입,
+   토큰을 `setAuthToken()` 에 연결, `ApiError` 를 명세의 401/403/404/409 에 맞추기
+2. **BE 완료된 "퀴즈 카드 받아오기"부터 실제로 붙여** 연결·인증·에러 처리가 도는지 확인
+3. 나머지는 BE 가 완료되는 순서대로
+
+### 리포트 API 는 명세에 없다
+
+보호자 리포트 화면은 만들어져 있는데 해당 엔드포인트가 명세에 없다.
+당분간 `features/report/model/types.ts` 의 목데이터로 둔다. 백엔드에 물어볼 것.
+
 ## 막혀 있는 것
 
-**모든 화면이 목데이터로 돈다.** 백엔드 API 스펙이 아직 없다. 코드에 `TODO` 로 표시된
-자리가 연동 지점이다(로그인·인증코드·아이 등록·TTS·STT·장면 배경·이미지 선택기 등).
+**모든 화면이 아직 목데이터로 돈다.** 명세는 나왔지만(위 참고) 서버가 대부분
+미구현이라 실제로 붙인 곳은 아직 없다. 코드에 `TODO` 로 표시된 자리가 연동
+지점이다(로그인·아이 등록·TTS·STT·장면 배경·이미지 선택기 등).
 
 **대화·활동은 PRD 의 핵심인데 아직 껍데기다.** 화면과 흐름은 다 있지만 아이 말을
 실제로 듣지 않는다. TTS·STT·장면 생성 API 가 붙어야 진짜로 돈다.
@@ -451,5 +526,20 @@ Figma 현재 지오메트리와 1:1로 다시 맞췄다.
 기록을 분석해 한 편씩 만들어야 한다. 지금은 이야기 완료와 리포트가 이어져 있지
 않다 — 완료 화면에서 리포트로 가는 길도 아직 없다(디자인에도 없다).
 
+**로그인 버튼이 아직 아무 일도 하지 않는다.** `LoginScreen` 의 `handleSubmit` 이
+TODO 라 눌러도 넘어가지 않는다. 실기기·에뮬레이터에서 화면을 볼 때는 딥링크로 들어간다
+(`goodquestion://home`, `goodquestion://story/3/play`, `goodquestion://report`).
+
 인증 상태 관리도 아직 없다. 지금은 딥링크로 아무 화면이나 열린다.
 활성 아이도 여전히 라우트별 `useState` 라, 홈에서 고른 아이가 리포트에 이어지지 않는다.
+
+## 다음 세션이 할 일 (우선순위 순)
+
+1. **Supabase 정보 받기** — 위 "시작하기 전에 받아야 할 것" 5가지
+2. **공통 기반 깔기** — Supabase 클라이언트, 토큰 연결, `ApiError` 를 명세 상태코드에 맞추기
+3. **`GET /api/sessions/{session_id}/post-activity` 붙여보기** — BE 완료된 유일한 것.
+   여기서 연결·인증·에러가 다 돌면 나머지는 같은 방식으로 확장하면 된다
+4. BE 완료되는 엔드포인트를 순서대로 연결
+5. (디자이너 확인 대기) 리포트 프레임 폭 1007 → 1024, 리포트 드롭다운 목록 순서,
+   이야기 줄의 사람 아이콘, 마이페이지의 집 모양 아이콘, "궁금해한 어휘" 칩의 갈색 글자
+6. (미결) 리포트 줄간격을 시안 렌더에 맞춰 좁힐지 — 하면 읽는 영역이 ~19dp 넓어진다
