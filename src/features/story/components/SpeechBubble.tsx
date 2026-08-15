@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   characterBubble: {
     // 말풍선이 화면을 가로지르지 않게 막는다. 디자인의 한 줄짜리 대사는 그대로 들어간다.
-    maxWidth: 520,
+    maxWidth: 261, // 디자인 실측. 2단이 되면서 대화 열이 497 로 좁아졌다.
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.sm,
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 2, // 디자인 실측
   },
   childBubble: {
-    maxWidth: 520,
+    maxWidth: 261, // 디자인 실측. 2단이 되면서 대화 열이 497 로 좁아졌다.
     paddingHorizontal: 14, // 디자인 실측
     paddingVertical: spacing.lg,
     borderRadius: radius.sm,

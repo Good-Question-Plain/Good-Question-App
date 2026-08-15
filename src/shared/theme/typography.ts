@@ -67,6 +67,8 @@ export const typography = {
   chip: { fontFamily: fontFamily.semiBold, fontSize: 13, lineHeight: 18 },
   /** 작은 라벨 (아바타 이름, 선택 상태) — 15/SemiBold */
   labelSmall: { fontFamily: fontFamily.semiBold, fontSize: 15, lineHeight: 20 },
+  /** 강조된 작은 라벨 (대화 화면 줄거리 패널의 뱃지) — 15/Bold */
+  labelBold: { fontFamily: fontFamily.bold, fontSize: 15, lineHeight: 22 },
   /** 작은 보조 라벨 (아바타 이름, 기본 상태) — 12/Regular */
   captionSmall: { fontFamily: fontFamily.regular, fontSize: 12, lineHeight: 16 },
   /** 인증코드 한 글자 — 20/SemiBold */

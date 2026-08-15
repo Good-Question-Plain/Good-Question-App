@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 import { colors, hitSize, hitSlopFor, radius, spacing } from '@/shared/theme';
 import {
@@ -14,6 +14,7 @@ import {
 } from '@/shared/ui';
 
 import { MicControl, type MicState } from '../components/MicControl';
+import { NarrationPanel } from '../components/NarrationPanel';
 import { ScenePanel } from '../components/ScenePanel';
 import { CharacterBubble, ChildBubble, ListeningHint } from '../components/SpeechBubble';
 import { findScript } from '../model/script';
@@ -145,18 +146,7 @@ export function StoryPlayScreen(): React.JSX.Element {
   };
 
   return (
-    <Screen
-      padded={false}
-      maxContentWidth={null}
-      backdrop={
-        <Image
-          source={SCENE_BACKGROUND}
-          resizeMode="cover"
-          style={styles.backdrop}
-          accessibilityIgnoresInvertColors
-        />
-      }
-    >
+    <Screen padded={false} maxContentWidth={null}>
       <View style={styles.page}>
         <View style={styles.topBar}>
           {backButton}
@@ -176,15 +166,25 @@ export function StoryPlayScreen(): React.JSX.Element {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.bodyScroll}>
-          {/* 장면이 바뀌면 패널이 새로 나타나야 아이가 "넘어갔다"를 안다. */}
-          <Appear key={sceneIndex} style={styles.body}>
-            <ScenePanel
+        <View style={styles.body}>
+          {/* 왼쪽: 줄거리. 장면이 바뀌면 새로 나타나야 아이가 "넘어갔다"를 안다. */}
+          <Appear key={sceneIndex} style={styles.narrationColumn}>
+            <NarrationPanel
               badge={scene.mission === undefined ? '이야기 줄거리' : '이야기 상황'}
               text={scene.narration}
               onReplay={() => {
                 // TODO: TTS 재생
               }}
+            />
+          </Appear>
+
+          {/* 오른쪽: 배경 그림 위에 대화와 마이크가 얹힌다. */}
+          <View style={styles.sceneColumn}>
+            <Image
+              source={SCENE_BACKGROUND}
+              resizeMode="cover"
+              style={styles.backdrop}
+              accessibilityIgnoresInvertColors
             />
 
             {micState !== 'blocked' && (
@@ -195,28 +195,31 @@ export function StoryPlayScreen(): React.JSX.Element {
               </View>
             )}
 
-            {scene.mission !== undefined && (
-              <ScenePanel badge="미션" text={scene.mission} align="center" />
-            )}
-          </Appear>
-        </ScrollView>
+            {/* 미션과 마이크는 한 덩어리로 아래에 붙는다 (디자인 실측: 바닥에서 23). */}
+            <View style={styles.bottomStack}>
+              {scene.mission !== undefined && (
+                <ScenePanel badge="미션" text={scene.mission} align="center" />
+              )}
 
-        <View style={styles.micArea}>
-          <MicControl state={micState} onPress={handleMicPress} />
+              <View style={styles.micArea}>
+                <MicControl state={micState} onPress={handleMicPress} />
 
-          {/* 보내기는 아이 차례에만 나오지만(디자인 86:410 엔 없다) 자리는 늘 비워둔다.
-              버튼이 생겼다 사라지면 그 위의 마이크가 손가락 밑에서 위아래로 움직인다. */}
-          <View style={styles.sendSlot}>
-            {micState !== 'blocked' && (
-              <Button
-                label={isLastScene ? '마치기' : '보내기'}
-                // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
-                size="lg"
-                disabled={reply === null}
-                style={styles.send}
-                onPress={handleSend}
-              />
-            )}
+                {/* 보내기는 아이 차례에만 나오지만(디자인 380:342 엔 없다) 자리는 늘 비워둔다.
+                    버튼이 생겼다 사라지면 그 위의 마이크가 손가락 밑에서 위아래로 움직인다. */}
+                <View style={styles.sendSlot}>
+                  {micState !== 'blocked' && (
+                    <Button
+                      label={isLastScene ? '마치기' : '보내기'}
+                      // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
+                      size="lg"
+                      disabled={reply === null}
+                      style={styles.send}
+                      onPress={handleSend}
+                    />
+                  )}
+                </View>
+              </View>
+            </View>
           </View>
         </View>
       </View>
@@ -228,11 +231,32 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     paddingTop: 22, // 디자인 실측
-    paddingBottom: spacing.lg,
   },
+  // 왼쪽 457 : 오른쪽 539, 사이 13. 실측값을 flex 에 그대로 넣어 비율을 지킨다.
+  // 오른쪽 열은 화면 오른쪽·아래 끝에 붙으므로 페이지에 오른쪽 여백을 주지 않는다.
+  body: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 13, // 디자인 실측
+    paddingLeft: 15, // 디자인 실측
+    paddingTop: spacing.md, // 디자인 실측(뒤로가기 아래 → 패널 위 y81)
+  },
+  narrationColumn: {
+    flex: 457, // 디자인 실측
+    marginBottom: 19, // 디자인 실측 (왼쪽 패널만 바닥에서 떠 있다)
+  },
+  sceneColumn: {
+    flex: 539, // 디자인 실측
+    overflow: 'hidden',
+    borderTopLeftRadius: spacing.xl,
+  },
+  // 그림은 열을 꽉 채우고, 그 위에 대화와 마이크가 얹힌다.
   backdrop: {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     opacity: BACKDROP_OPACITY,
   },
   topBar: {
@@ -264,21 +288,21 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.primary,
   },
-  bodyScroll: {
-    flexGrow: 1,
-  },
-  body: {
-    gap: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingHorizontal: 40, // 디자인 실측
-  },
   chat: {
     gap: spacing.md,
+    marginTop: 47, // 디자인 실측 (오른쪽 열 위에서 47)
+    marginHorizontal: 21, // 디자인 실측 (대화 패널 497 = 539 - 21*2)
+  },
+  // 미션 + 마이크. 남는 공간을 밀어내 항상 아래에 붙는다.
+  bottomStack: {
+    marginTop: 'auto',
+    gap: spacing.md, // 디자인 실측 (미션 → 마이크 10)
+    marginBottom: 23, // 디자인 실측
+    marginHorizontal: 46, // 디자인 실측 (미션 패널 447 = 539 - 46*2)
   },
   micArea: {
     alignItems: 'center',
     gap: spacing.md,
-    paddingTop: spacing.lg,
   },
   sendSlot: {
     height: hitSize.min, // 보내기 버튼(lg) 높이

@@ -13,7 +13,6 @@ import {
   EmptyState,
   PillTabs,
   PressableScale,
-  ProfileFillIcon,
   Screen,
   type TabKey,
   Text,
@@ -22,8 +21,9 @@ import {
 import { HighlightCard } from '../components/HighlightCard';
 import { HomeTopics } from '../components/HomeTopics';
 import { SkillPanel } from '../components/SkillPanel';
+import { StoryPicker } from '../components/StoryPicker';
 import { VocabularyPanel } from '../components/VocabularyPanel';
-import { formatReportDate, MOCK_REPORTS, REPORT_TABS, type ReportTab } from '../model/types';
+import { MOCK_REPORTS, REPORT_TABS, type ReportTab } from '../model/types';
 
 /** 하단 탭 키를 라우트로 옮기는 표. typedRoutes 를 쓰므로 문자열 조립 대신 표로 둔다. */
 const TAB_ROUTES = {
@@ -114,19 +114,13 @@ export function ReportScreen({
         <Appear>{header}</Appear>
 
         <Appear delay={40} style={styles.summary}>
-          <View style={styles.storyRow}>
-            <View style={styles.storyBadge}>
-              <ProfileFillIcon width={34} height={34} />
-            </View>
-            <View style={styles.storyText}>
-              <Text variant="heading" numberOfLines={1}>
-                {report.storyTitle}
-              </Text>
-              <Text variant="footnote" color="textMuted">
-                {formatReportDate(report.completedAt)}
-              </Text>
-            </View>
-          </View>
+          <StoryPicker
+            current={report}
+            reports={MOCK_REPORTS}
+            onSelect={(reportId) =>
+              setIndex(MOCK_REPORTS.findIndex((item) => item.id === reportId))
+            }
+          />
 
           <View style={styles.traitCard}>
             <Text variant="bodyBold" color="primaryText">
@@ -207,28 +201,6 @@ const styles = StyleSheet.create({
   },
   summary: {
     gap: spacing['2xl'],
-  },
-  storyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xl,
-    paddingHorizontal: spacing['2xl'],
-    paddingVertical: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAccentWarm,
-  },
-  storyBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 39, // 디자인 실측
-    height: 39,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryAccent,
-  },
-  // 이야기 제목이 길어도 뱃지를 밀어내지 않도록 남는 폭만 쓴다.
-  storyText: {
-    flex: 1,
-    gap: spacing.xs,
   },
   traitCard: {
     gap: spacing.sm,
