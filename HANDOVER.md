@@ -1,4 +1,4 @@
-# 인수인계 (2026-08-15, API 명세 확인 후 갱신 — 다음은 백엔드 연동)
+# 인수인계 (2026-08-15, Supabase 연결까지 완료 — 다음은 로그인 화면 연동)
 
 작업 규칙은 [AGENTS.md](AGENTS.md), 실행 방법은 [README.md](README.md) 에 있다.
 이 문서는 **둘 중 어디에도 없는 것** — 지금까지의 판단과 다음에 할 일 — 만 담는다.
@@ -476,25 +476,67 @@ Notion MCP 로 읽는다 — 목록은 `query_data_sources`, 상세는 `fetch`.
   프로필을 만드는 단계**다. body `{ name }`, 성공 201, 이미 있으면 409
 - 소셜 로그인의 복귀 주소로 앞서 정리한 딥링크(`goodquestion://oauth`)를
   **Supabase 콘솔의 Redirect URL 에 등록**해야 한다
-- 토큰은 `setAuthToken(token)` 한 번만 부르면 이후 요청에 `Bearer` 로 붙는다
-  (`shared/api/client.ts`). 지금은 메모리에만 있어서 앱을 끄면 날아간다 —
-  로그인 유지가 필요하면 AsyncStorage 로 옮긴다
 
-### 시작하기 전에 받아야 할 것 (Supabase)
+**앱은 서버 두 곳에 붙는다.** 이걸 헷갈리면 설계가 꼬인다.
 
-이거 없이는 로그인부터 막힌다.
+```
+① 로그인   앱 → Supabase(supabase.co)     : 이메일/비번 또는 소셜 → JWT 발급
+② 그 외    앱 → 우리 백엔드(api base url) : Authorization: Bearer <①의 JWT>
+```
 
-1. **Supabase Project URL** — `https://xxxxx.supabase.co`
-2. **anon (public) key** — 클라이언트에 넣는 공개 키. service_role 키는 절대 앱에 넣지 않는다
-3. **어떤 소셜 로그인을 켰는지** — Google / Kakao / Naver 중 무엇이며 Supabase 콘솔에
-   provider 가 실제로 활성화돼 있는지
-4. **Redirect URL 등록 여부** — `goodquestion://oauth` 가 Supabase 의 Redirect URLs 에
-   들어가 있는지
-5. **이메일 확인(Confirm email) 설정** — 켜져 있으면 가입 직후 로그인이 안 되므로
-   테스트 계정을 미리 확인 처리해두거나 꺼야 한다
+우리 백엔드는 토큰을 **발급하지 않고 검증만** 한다(백엔드 env 에 `SUPABASE_JWT_SECRET`
+이 있는 이유). 그래서 base url 하나로는 로그인할 데가 없다. 하나로 줄이려면 백엔드가
+`POST /api/auth/login` 프록시를 만들어야 하는데, 소셜까지 직접 구현해야 해서
+지금 방식(앱 → Supabase 직접)이 일반적이다.
 
-받으면 `.env` 에 `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` 로 넣고
-`.env.example` 에도 같은 키를 빈 값으로 추가한다.
+**Confirm email 을 켜둔 채로 간다** (사용자 결정). 그래서 `signUp()` 직후에는 세션이
+없다(`{ user, session: null }`). `sync-profile` 은 Bearer 가 필수라 **가입 직후가 아니라
+"메일 확인 뒤 첫 로그인 성공 시점"에 불러야 한다.** 이걸 놓치면 Supabase 엔 계정이
+있는데 서버 DB 엔 프로필이 없어 401 "프로필이 등록되지 않은 사용자입니다" 가 난다.
+
+### Supabase 연결은 끝났다 (2026-08-15)
+
+`.env` 에 세 키가 다 들어가 있다 — `EXPO_PUBLIC_API_BASE_URL`,
+`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+`auth/v1/health` 가 200 이고 잘못된 자격증명에 `invalid_credentials` 가 오는 것까지
+확인했다. **인증 서버에 정상적으로 닿는다.**
+
+**`EXPO_PUBLIC_SUPABASE_URL` 은 프로젝트 루트여야 한다.** 처음에 콘솔의 Data API
+주소(`https://xxx.supabase.co/rest/v1/`)가 들어가 있어서, 로그인 요청이 auth 서버가
+아니라 PostgREST 로 가 `PGRST125 Invalid path specified in request URL` 로 실패했다.
+`Project Settings → API → Project URL` 값을 넣어야 한다. 같은 실수를 또 하면
+`env.ts` 가 개발 중에 경고를 띄운다(끝 슬래시는 자동으로 떼낸다).
+
+**앱에 절대 넣지 않는 값**: `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`.
+둘 다 백엔드 전용이다. anon key 만 클라이언트용이다.
+
+### 아직 확인 안 된 것
+
+- **소셜 provider** — Google/Kakao/Naver 중 무엇을 켰는지, 콘솔에서 Enabled 인지
+  (사용자는 "아마 되어 있을 것"이라고 함)
+- **Redirect URL** — `goodquestion://oauth` 가 Authentication → URL Configuration 에
+  등록돼 있는지 (역시 "아마")
+- **확인 처리된 테스트 계정** — Confirm email 을 켜둔 채로 가기로 했으므로,
+  메일 확인까지 끝낸 계정이 하나 있어야 로그인 흐름을 끝까지 돌려볼 수 있다
+
+### 이미 깔아둔 기반 (2026-08-15)
+
+연동의 공통 부분은 끝나 있다. 다음 세션은 로그인 화면부터 붙이면 된다.
+
+| 무엇                                         | 어디                                                |
+| -------------------------------------------- | --------------------------------------------------- |
+| Supabase 클라이언트 (AsyncStorage 세션 유지) | `shared/api/supabase.ts`                            |
+| 세션 토큰 → `apiClient` 자동 연결            | `startAuthTokenSync()`, `app/_layout.tsx` 에서 호출 |
+| 401/403/404/409 구분                         | `shared/api/errors.ts` 의 `ApiErrorKind`            |
+| env 검증 (끝 슬래시 제거, URL 경로 경고)     | `shared/config/env.ts`                              |
+
+`@supabase/supabase-js` 와 `react-native-url-polyfill` 을 넣었다. **둘 다 순수 JS라
+네이티브 재빌드가 필요 없다** — 기존 dev client APK 를 그대로 쓸 수 있다.
+polyfill 은 `_layout.tsx` 최상단에서 import 하며, supabase 클라이언트보다 먼저
+로드돼야 해서 위치를 옮기면 안 된다.
+
+**화면에서 토큰을 직접 다룰 일은 없다.** `onAuthStateChange` 가 로그인·로그아웃·
+토큰 갱신을 전부 따라가며 `setAuthToken()` 을 부른다.
 
 ### 서버가 아직 대부분 미구현이다
 
@@ -533,13 +575,43 @@ TODO 라 눌러도 넘어가지 않는다. 실기기·에뮬레이터에서 화�
 인증 상태 관리도 아직 없다. 지금은 딥링크로 아무 화면이나 열린다.
 활성 아이도 여전히 라우트별 `useState` 라, 홈에서 고른 아이가 리포트에 이어지지 않는다.
 
+## 앞으로 테스트는 실기기 태블릿에서 한다 (2026-08-15 결정)
+
+에뮬레이터가 아니라 **USB 로 연결된 태블릿에 빌드해 올려서** 확인한다.
+지금 태블릿이 연결돼 있다.
+
+```bash
+adb devices                                    # 잡히는지 먼저 확인
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb reverse tcp:8081 tcp:8081                  # Metro
+adb reverse tcp:8080 tcp:8080                  # 백엔드를 PC 에서 돌릴 때
+npx expo start --dev-client --clear
+```
+
+- **JS 만 바뀌었으면 APK 를 다시 만들 필요가 없다.** `@supabase/supabase-js` 도
+  순수 JS라 기존 APK 그대로 쓴다. 네이티브 모듈을 새로 넣을 때만 `npx expo run:android`.
+- `.env` 를 고쳤으면 **반드시 `--clear`** 로 재시작한다. 빌드 타임에 치환되는 값이라
+  Fast Refresh 로는 안 바뀐다.
+- USB 로 볼 때 `EXPO_PUBLIC_API_BASE_URL` 은 `http://localhost:8080` 이면 된다
+  (`adb reverse` 를 걸었을 때). 에뮬레이터의 `10.0.2.2` 와 다르다.
+- 화면 확인은 `adb exec-out screencap -p > a.png`.
+- **로그인 버튼이 아직 TODO라** 화면 이동은 딥링크로 한다
+  (`goodquestion://home`, `goodquestion://story/3/play`, `goodquestion://report`).
+
 ## 다음 세션이 할 일 (우선순위 순)
 
-1. **Supabase 정보 받기** — 위 "시작하기 전에 받아야 할 것" 5가지
-2. **공통 기반 깔기** — Supabase 클라이언트, 토큰 연결, `ApiError` 를 명세 상태코드에 맞추기
+1. **로그인·회원가입을 Supabase 에 연결** — 기반은 다 깔려 있다(위 "이미 깔아둔 기반").
+   - 이메일/비밀번호: `supabase.auth.signInWithPassword()`
+   - `LoginScreen` 의 `handleSubmit` 이 아직 TODO 다
+   - Confirm email 이 켜져 있으므로 `sync-profile` 은 **첫 로그인 성공 시점**에 부른다
+   - 확인 처리된 테스트 계정이 하나 필요하다
+2. **소셜 로그인** — 콘솔에 어떤 provider 가 켜져 있는지 확인부터.
+   복귀는 `goodquestion://oauth` 딥링크이고, 이 라우트는 아직 앱에 없다
 3. **`GET /api/sessions/{session_id}/post-activity` 붙여보기** — BE 완료된 유일한 것.
-   여기서 연결·인증·에러가 다 돌면 나머지는 같은 방식으로 확장하면 된다
+   실제 연결·인증·에러가 도는지 여기서 검증한다
 4. BE 완료되는 엔드포인트를 순서대로 연결
-5. (디자이너 확인 대기) 리포트 프레임 폭 1007 → 1024, 리포트 드롭다운 목록 순서,
+5. 백엔드에 확인할 것 — `/api` prefix 가 맞는지(명세 안에서 표기가 엇갈린다),
+   보호자 리포트 API 계획(화면은 있는데 명세에 없다)
+6. (디자이너 확인 대기) 리포트 프레임 폭 1007 → 1024, 리포트 드롭다운 목록 순서,
    이야기 줄의 사람 아이콘, 마이페이지의 집 모양 아이콘, "궁금해한 어휘" 칩의 갈색 글자
-6. (미결) 리포트 줄간격을 시안 렌더에 맞춰 좁힐지 — 하면 읽는 영역이 ~19dp 넓어진다
+7. (미결) 리포트 줄간격을 시안 렌더에 맞춰 좁힐지 — 하면 읽는 영역이 ~19dp 넓어진다

@@ -8,8 +8,12 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { queryClient } from '@/shared/api';
+import { queryClient, startAuthTokenSync } from '@/shared/api';
 import { colors, fontAssets } from '@/shared/theme';
+
+// RN 의 URL 구현이 완전하지 않아 supabase-js 가 내부에서 쓰는 URL 파싱이 깨진다.
+// 반드시 supabase 클라이언트를 만들기 전에 로드돼야 해서 최상단에 둔다.
+import 'react-native-url-polyfill/auto';
 
 // 폰트가 준비될 때까지 스플래시를 유지한다. 이걸 빼면 시스템 폰트로 한 프레임
 // 그려졌다가 Pretendard 로 바뀌면서 글자가 튀어 보인다.
@@ -30,6 +34,10 @@ export default function RootLayout(): React.JSX.Element | null {
       void SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  // Supabase 세션의 토큰을 apiClient 에 연결한다. 이걸 켜두면 로그인·로그아웃·
+  // 토큰 갱신이 알아서 따라가므로 화면에서 토큰을 직접 다룰 일이 없다.
+  useEffect(() => startAuthTokenSync(), []);
 
   if (!fontsLoaded && !fontError) {
     return null;
