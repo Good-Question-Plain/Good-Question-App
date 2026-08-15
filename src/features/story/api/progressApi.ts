@@ -13,8 +13,14 @@ import { request } from '@/shared/api';
  * 목데이터(`model/script.ts`)라 한꺼번에 갈아끼워야 한다.
  */
 
-/** 한 장면에서 무엇을 하는지. 화면의 마이크 상태·패널 구성이 여기서 갈린다. */
-export type StepKind = 'narration' | 'dialogue' | 'mission';
+/**
+ * 한 장면에서 무엇을 하는지. 화면의 마이크 상태·패널 구성이 여기서 갈린다.
+ *
+ * **`mission` 은 여기에 없다.** 명세가 "미션은 kind 가 아니다"라고 못박았고,
+ * 미션이 있는 장면도 `kind` 는 `dialogue` 이며 `step.mission` 객체가 따로 붙는다.
+ * 즉 **미션 여부는 `kind` 가 아니라 `mission !== null` 로 판단한다.**
+ */
+export type StepKind = 'narration' | 'dialogue';
 
 /** 미션 패널에 들어가는 내용. 단계 진입 시점에는 항상 null 이고 발화 응답으로 온다. */
 export interface StepMission {
@@ -22,6 +28,22 @@ export interface StepMission {
   condition: string;
   /** 예시 문구들. 아이가 막혔을 때 힌트로 보여준다. */
   examples: string[];
+}
+
+/**
+ * 이 장면에 매달린 단어 하나.
+ *
+ * 아이가 대화 중에 "이거 무슨 뜻이야?" 하고 고를 수 있는 후보들이다.
+ * 고르면 `selected: true` 가 되고, 그게 리포트의 "궁금해한 어휘"와
+ * `GET /vocabulary?kind=curious` 의 출처가 된다.
+ */
+export interface SceneVocabulary {
+  /** `scene_vocabularies.id`. 단어를 고를 때 이 id 를 보낸다. */
+  id: string;
+  word: string;
+  definition: string;
+  exampleSentence: string;
+  selected: boolean;
 }
 
 export interface SessionStep {
@@ -40,10 +62,12 @@ export interface SessionStep {
   maxTurns: number | null;
   turn: number | null;
   /**
-   * 미션 장면에서만 채워진다.
+   * 미션이 있는 장면에서만 채워진다 (`kind` 는 그대로 `dialogue` 다).
    * **단계 진입 시점에는 항상 null 이다** — 아이가 말한 뒤 `speak` 응답으로 온다.
    */
   mission: StepMission | null;
+  /** 이 장면에서 아이가 고를 수 있는 단어들. 없으면 빈 배열이다. */
+  vocabularies: SceneVocabulary[];
 }
 
 export interface StorySession {
@@ -53,6 +77,24 @@ export interface StorySession {
   currentStep: number;
   sceneCount: number;
   step: SessionStep;
+}
+
+interface SceneVocabularyDto {
+  id: string;
+  word: string;
+  definition: string;
+  example_sentence: string;
+  selected: boolean;
+}
+
+function toSceneVocabulary(dto: SceneVocabularyDto): SceneVocabulary {
+  return {
+    id: dto.id,
+    word: dto.word,
+    definition: dto.definition,
+    exampleSentence: dto.example_sentence,
+    selected: dto.selected,
+  };
 }
 
 interface SessionStepDto {
@@ -68,6 +110,7 @@ interface SessionStepDto {
   max_turns: number | null;
   turn: number | null;
   mission: StepMission | null;
+  vocabularies: SceneVocabularyDto[];
 }
 
 interface StorySessionDto {
@@ -93,6 +136,8 @@ function toStep(dto: SessionStepDto): SessionStep {
     maxTurns: dto.max_turns,
     turn: dto.turn,
     mission: dto.mission,
+    // 서버가 항상 배열을 준다고 했지만, 빠져 오면 화면이 `.map` 에서 터진다.
+    vocabularies: (dto.vocabularies ?? []).map(toSceneVocabulary),
   };
 }
 
@@ -268,6 +313,49 @@ export async function speak(
     sceneEnded: dto.scene_ended,
     endReason: dto.end_reason,
   };
+}
+
+/**
+ * `POST /progress/{story_id}/steps/{step_index}/vocabularies?child_id=`
+ *
+ * 아이가 대화 중에 "이거 무슨 뜻이야?" 하고 단어를 고른다.
+ * **이게 리포트의 "궁금해한 어휘"와 `GET /vocabulary?kind=curious` 의 출처다.**
+ *
+ * 이미 고른 단어를 또 보내도 200 이다(멱등). 응답은 그 장면의 단어 **전체**라
+ * 화면은 돌려받은 배열로 통째로 갈아끼우면 된다.
+ */
+export async function selectSceneVocabulary(
+  storyId: string,
+  stepIndex: number,
+  childId: string,
+  sceneVocabularyId: string,
+): Promise<SceneVocabulary[]> {
+  const dto = await request<{ items: SceneVocabularyDto[] }>({
+    method: 'POST',
+    url: `/progress/${storyId}/steps/${stepIndex}/vocabularies`,
+    params: { child_id: childId },
+    data: { scene_vocabulary_id: sceneVocabularyId },
+  });
+  return dto.items.map(toSceneVocabulary);
+}
+
+/**
+ * `DELETE /progress/{story_id}/steps/{step_index}/vocabularies/{scene_vocabulary_id}?child_id=`
+ *
+ * 고른 단어를 취소한다. 응답은 등록과 같은 모양(그 장면의 단어 전체)이다.
+ */
+export async function deselectSceneVocabulary(
+  storyId: string,
+  stepIndex: number,
+  childId: string,
+  sceneVocabularyId: string,
+): Promise<SceneVocabulary[]> {
+  const dto = await request<{ items: SceneVocabularyDto[] }>({
+    method: 'DELETE',
+    url: `/progress/${storyId}/steps/${stepIndex}/vocabularies/${sceneVocabularyId}`,
+    params: { child_id: childId },
+  });
+  return dto.items.map(toSceneVocabulary);
 }
 
 export interface StoryProgressState {

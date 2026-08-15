@@ -736,12 +736,18 @@ Wi-Fi 를 연결한 뒤 태블릿에서 확인했다.
 | 단어장    | ✅ 붙임 (목데이터 제거)                  | `features/wordbook/api/`                |
 | 이야기    | ⚠️ API 계층만. **화면은 아직 목데이터**   | `features/story/api/storyApi.ts`        |
 | 활동      | ⚠️ API 계층만 (session_id 가 없다)       | `features/story/api/activityApi.ts`     |
-| 학습      | ⚠️ API 계층 **6개 전부**. 화면은 아직     | `features/story/api/progressApi.ts`     |
-| 리포트    | ❌ 명세에 없음                           | —                                       |
+| 학습      | ⚠️ API 계층 **8개 전부**. 화면은 아직     | `features/story/api/progressApi.ts`     |
+| 리포트    | ⚠️ API 계층 2개. 화면은 아직 목데이터     | `features/report/api/reportApi.ts`      |
 
-**명세 23개 중 20개를 코드로 옮겼다.** 남은 셋은 `GET /users/mypage`(안 쓰기로 함),
-`POST /users/profile-image/presigned-url`(이미지 선택기가 아직 없다),
-`GET /stories/{id}`(명세에 없음).
+**명세 25개 중 24개를 코드로 옮겼다.** 안 옮긴 하나는 `GET /users/mypage` 인데
+쓰지 않기로 한 것이다(아이 목록 출처를 하나로 두려고 — `accountApi.ts` 주석).
+
+그중 **화면까지 연결된 건 11개**, 훅만 있고 붙일 화면이 없는 게 2개
+(`PATCH /users/me` 는 계정 설정 화면 대기, `PATCH /users/me/children/{id}` 는
+수정 화면 대기), 나머지 11개는 API 계층만 있고 화면은 목데이터다.
+
+**실제 서버 응답으로 검증된 건 아직 0개다.** 유일하게 실호출된
+`POST /auth/sync-profile` 은 백엔드 터널이 끊긴 상태(530)라 5xx 를 받았다.
 
 #### 아이 목록이 서버에서 온다
 
@@ -1115,6 +1121,65 @@ npx expo start --dev-client --clear
    이야기 줄의 사람 아이콘, 마이페이지의 집 모양 아이콘, "궁금해한 어휘" 칩의 갈색 글자
 8. (미결) 리포트 줄간격을 시안 렌더에 맞춰 좁힐지 — 하면 읽는 영역이 ~19dp 넓어진다
 
+## 명세가 개정됐다 (2026-08-15 저녁) — 중요
+
+Notion 명세가 통째로 다시 만들어졌다(데이터베이스 id 가 전부 바뀌었다).
+**막고 있던 것 두 개가 풀렸고, 우리 코드가 틀린 곳이 두 군데 나왔다.**
+
+### 풀린 것
+
+**보고서 API 가 생겼다** — `보고서` 데이터베이스가 신설됐다.
+
+| | |
+| --- | --- |
+| `GET /reports/{story_id}?child_id=` | 리포트 전문 |
+| `POST /reports/{story_id}/generate?child_id=` | 생성 요청 (202) |
+
+응답이 우리 리포트 화면과 거의 그대로 맞는다 — 대표 발화, 어휘, 표현 3항목
+(`perspective_empathy` `emotion_expression` `interaction`), 논리 2항목
+(`thought_reason` `outcome_solution`), 집에서 이어가기, **이전/다음 이야기 id**
+(우리가 만든 페이저와 대응).
+
+**리포트는 자동으로 안 만들어진다.** 이야기를 끝내도 생기지 않고 `generate` 를
+불러야 하며, 생성이 백그라운드라 **`GET` 으로 폴링해야 한다**
+(`useStoryReport` 가 `status === 'generating'` 이면 3초마다 다시 묻는다).
+409 는 "이미 만드는 중"이라 실패로 다루지 않는다.
+
+**학습 `/progress` 8개가 전부 "BE 완료"** 로 바뀌었다. 어제는 0개였다.
+
+### 새로 생긴 기능 — 대화 중 단어 고르기
+
+`POST /progress/{story_id}/steps/{step_index}/vocabularies` 와
+`DELETE .../{scene_vocabulary_id}`. 씬마다 단어가 매달려 오고
+(`step.vocabularies`), 아이가 고른 단어가 **리포트의 "궁금해한 어휘"와
+`GET /vocabulary?kind=curious` 의 출처**가 된다. 응답은 그 씬의 단어 전체라
+화면은 통째로 갈아끼우면 된다.
+
+### 우리 코드가 틀렸던 곳 (고쳤다)
+
+1. **`kind` 에서 `mission` 을 뺐다.** 명세가 "미션은 kind 가 아니다"라고
+   못박았다 — 미션이 있는 장면도 `kind` 는 `dialogue` 이고 `step.mission`
+   객체가 따로 붙는다. **미션 여부는 `mission !== null` 로 판단해야 한다**
+2. **`step.vocabularies` 를 추가했다.** 예전 스펙에는 없던 배열이다
+
+### ⚠️ 단어장 스펙이 두 가지로 충돌한다 — 백엔드 확인 필요
+
+같은 `GET /vocabulary` 에 대해 명세 안에 서로 다른 스펙이 **둘 다** 있다.
+
+| | 단어장 DB (옛 버전) | 보고서 페이지에 붙은 것 (새 버전) |
+| --- | --- | --- |
+| 경로 | `/api/vocabulary` | `/vocabulary` |
+| 응답 | 배열 | `{ total, items }` |
+| 필드 | `story_id` `story_title` `is_saved` | `kind`(used/curious) `definition` `example_sentence` |
+| 페이징 | 없음 | `limit` / `offset` |
+
+새 버전이 맞아 보인다 — 새로 생긴 단어 고르기 기능이 "`GET /vocabulary?kind=curious`
+의 출처"라며 새 버전을 가리키고, 경로도 `/api` 없이 적혀 실제 서버와 맞는다.
+
+**그런데 새 버전에는 `is_saved` 도 `story_title` 도 없다.** 우리 단어장 화면에는
+하트(저장 토글)와 "이야기별" 탭이 있고, `POST/DELETE /vocabulary/{id}/save` 는
+명세에 그대로 남아 있다. **앱이 정할 수 없는 충돌이라 지금 구현을 그대로 뒀다.**
+
 ## 백엔드에 물어볼 것 — 진짜 막히는 것만
 
 명세가 비어 있어도 **앱 쪽에서 감당할 수 있는 건 전부 감당하도록 만들어 뒀다**
@@ -1122,12 +1187,16 @@ npx expo start --dev-client --clear
 
 1. **`GET /stories/{id}` 상세가 없다.** 목록은 제목·시간·주제·표지뿐인데 상세
    화면에는 줄거리·역할 안내·등장인물이 있다. **없는 데이터라 앱이 지어낼 수 없다.**
-   이게 이야기 화면 연동 전체를 막고 있다
-2. **보호자 리포트 API 가 아예 없다.** 화면은 다 만들어져 있다. 어휘/표현/논리 분석,
-   대표 발화, 집에서 이어가기 문구 — 전부 서버가 만들어야 하는 값이다
-3. **STT·대사 생성이 언제 붙는지.** 명세에 "현재 비어 있음"이라고 서버가 직접
-   적어놨다. 이게 없으면 `speak` 가 빈 텍스트를 주고 **대화 장면이 끝나지 않아서**
-   화면을 연결해도 이야기를 끝까지 진행할 수 없다
+   개정된 명세에도 여전히 없다 — 이야기 화면 연동을 막는 유일한 항목이 됐다
+2. **단어장 `GET /vocabulary` 스펙이 두 개다.** 위 "충돌" 표 참고.
+   어느 쪽이 맞는지, 그리고 새 버전이 맞다면 우리 화면의 하트와 "이야기별" 탭을
+   어떻게 할지(=`is_saved`·`story_title` 을 살릴지)
+3. **서버가 지금 꺼져 있다.** 모든 경로가 530(`error code: 1033`, Cloudflare
+   Tunnel 끊김). 붙여둔 API 를 하나도 못 돌려보고 있다
+
+~~보호자 리포트 API~~ → 2026-08-15 저녁 명세에 생겼다. 붙였다.
+~~STT·대사 생성~~ → `/progress` 가 전부 "BE 완료"로 바뀌었다. 실제 동작은 서버가
+올라와야 확인 가능하다.
 
 **막히지는 않지만 알려주면 좋은 것** (답이 없어도 진행에 지장 없음)
 

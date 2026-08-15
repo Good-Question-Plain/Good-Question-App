@@ -9,11 +9,14 @@ import {
 } from './activityApi';
 import {
   completeStep,
+  deselectSceneVocabulary,
   enterStep,
   fetchActiveSession,
   fetchStoryProgress,
+  selectSceneVocabulary,
   speak,
   startStorySession,
+  type SceneVocabulary,
   type SessionStep,
   type SpeakResult,
   type StepProgress,
@@ -82,6 +85,27 @@ interface SpeakInput extends StepInput {
  * **서버의 STT·대사 생성이 아직 비어 있다.** 지금 붙이면 `child_text` 가 빈
  * 문자열로 오고 대화 장면이 끝나지 않는다 — 화면을 연결하기 전에 BE 확인이 필요하다.
  */
+interface SceneVocabularyInput extends StepInput {
+  sceneVocabularyId: string;
+  /** true 면 고르기, false 면 취소. */
+  selected: boolean;
+}
+
+/**
+ * 대화 중에 아이가 모르는 단어를 고르거나 취소한다.
+ *
+ * 응답이 그 장면의 단어 **전체**라 화면은 돌려받은 배열로 통째로 갈아끼우면 된다.
+ * 고르기는 멱등이라 같은 단어를 두 번 눌러도 200 이다.
+ */
+export function useSelectSceneVocabulary(childId: string) {
+  return useMutation<SceneVocabulary[], unknown, SceneVocabularyInput>({
+    mutationFn: ({ storyId, stepIndex, sceneVocabularyId, selected }) =>
+      selected
+        ? selectSceneVocabulary(storyId, stepIndex, childId, sceneVocabularyId)
+        : deselectSceneVocabulary(storyId, stepIndex, childId, sceneVocabularyId),
+  });
+}
+
 export function useSpeak(childId: string) {
   return useMutation<SpeakResult, unknown, SpeakInput>({
     mutationFn: ({ storyId, stepIndex, audio }) => speak(storyId, stepIndex, childId, audio),

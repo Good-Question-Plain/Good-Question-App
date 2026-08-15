@@ -5,6 +5,7 @@ export {
   useEnterStep,
   useMainPage,
   usePostActivity,
+  useSelectSceneVocabulary,
   useSpeak,
   useStartStorySession,
   useStories,
@@ -13,6 +14,7 @@ export {
   useSubmitRetelling,
 } from './api/queries';
 export type {
+  SceneVocabulary,
   SessionStep,
   SpeakResult,
   StepKind,
