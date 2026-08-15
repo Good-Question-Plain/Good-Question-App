@@ -14,7 +14,13 @@ import { colors, spacing, typography } from '@/shared/theme';
 import { Text } from './Text';
 
 export interface OtpInputProps {
-  /** 자릿수. 디자인은 6자리다. */
+  /**
+   * 자릿수.
+   *
+   * **시안은 6칸인데 서버가 보내는 코드는 8자리다** (Supabase 의 Email OTP
+   * Length 설정값). 화면이 서버를 따라가야 해서 호출부가 8을 넘긴다.
+   * 디자이너 확인 대상.
+   */
   length?: number;
   value: string;
   onChange: (value: string) => void;
@@ -89,8 +95,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  /**
+   * 칸 하나.
+   *
+   * 폭이 고정이 아니라 **남는 폭을 나눠 갖고 44 에서 멈춘다.**
+   * 디자인 실측은 44(6자리 기준)인데, 서버가 8자리 코드를 보내면
+   * 44×8 + 간격 7칸 = 408 이라 카드 안쪽 폭(420 - 좌우 32) 356 을 넘친다.
+   * `maxWidth` 로 캡을 씌워 **6자리일 때는 디자인 그대로 44**, 8자리면
+   * 알아서 좁아지게 했다.
+   */
   cell: {
-    width: 44, // 디자인 실측
+    flex: 1,
+    maxWidth: 44, // 디자인 실측
     height: 52, // 디자인 실측
     alignItems: 'center',
     justifyContent: 'center',

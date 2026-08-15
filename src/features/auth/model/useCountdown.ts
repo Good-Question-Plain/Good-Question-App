@@ -7,6 +7,8 @@ export interface Countdown {
   label: string;
   isRunning: boolean;
   restart: () => void;
+  /** 남은 시간을 0 으로 만들어 멈춘다. 단계를 넘어가 더 이상 보이지 않을 때 쓴다. */
+  stop: () => void;
 }
 
 function format(totalSeconds: number): string {
@@ -35,6 +37,7 @@ export function useCountdown(seconds: number): Countdown {
   }, [remaining]);
 
   const restart = useCallback(() => setRemaining(seconds), [seconds]);
+  const stop = useCallback(() => setRemaining(0), []);
 
-  return { remaining, label: format(remaining), isRunning: remaining > 0, restart };
+  return { remaining, label: format(remaining), isRunning: remaining > 0, restart, stop };
 }

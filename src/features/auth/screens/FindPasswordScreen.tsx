@@ -1,3 +1,4 @@
+import { AuthError } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,12 +16,15 @@ import {
 } from '@/shared/ui';
 
 import { isValidPassword, PasswordFields } from '../components/PasswordFields';
+import { useResetPassword, useSendEmailCode, useVerifySignUpCode } from '../hooks/useSignUp';
+import { authErrorMessage } from '../model/authErrors';
 import { useCountdown } from '../model/useCountdown';
 
-/** PRD: 인증코드 만료 5분, 재발송 대기 1분. */
-const CODE_TTL_SECONDS = 5 * 60;
+/** 회원가입과 같은 값이다 (`SignUpScreen` 주석에 왜 10분인지 적어뒀다). */
+const CODE_TTL_SECONDS = 10 * 60;
 const RESEND_COOLDOWN_SECONDS = 60;
-const CODE_LENGTH = 6;
+/** 회원가입과 같은 이유로 8이다 (`SignUpScreen` 주석 참고). */
+const CODE_LENGTH = 8;
 
 type Step = 1 | 2 | 3;
 
@@ -43,24 +47,64 @@ export function FindPasswordScreen(): React.JSX.Element {
   const expiry = useCountdown(CODE_TTL_SECONDS);
   const resend = useCountdown(RESEND_COOLDOWN_SECONDS);
 
+  // 가입과 달리 `shouldCreateUser: false` 다 — 없는 이메일로 새 계정이 생기면
+  // "재설정했는데 로그인이 안 되는" 계정이 만들어진다.
+  const sendCode = useSendEmailCode(false);
+  const verifyCode = useVerifySignUpCode();
+  const reset = useResetPassword();
+
+  const sendError = sendCode.isError ? sendCodeErrorMessage(sendCode.error) : undefined;
+  const verifyError = verifyCode.isError
+    ? authErrorMessage(verifyCode.error, '인증코드를 확인하지 못했습니다. 다시 시도해주세요.')
+    : undefined;
+  const resetError = reset.isError
+    ? authErrorMessage(reset.error, '비밀번호를 바꾸지 못했습니다. 다시 시도해주세요.')
+    : undefined;
+
   const handleSendCode = (): void => {
-    // TODO: 비밀번호 재설정 인증코드 발송 API
-    expiry.restart();
-    resend.restart();
-    setStep(2);
+    if (sendCode.isPending) return;
+
+    sendCode.mutate(email, {
+      // 타이머는 메일이 실제로 나간 뒤에 시작한다.
+      onSuccess: () => {
+        expiry.restart();
+        resend.restart();
+        setCode('');
+        setStep(2);
+      },
+    });
   };
 
   const handleResend = (): void => {
-    if (resend.isRunning) return;
-    // TODO: 인증코드 재발송 API
-    expiry.restart();
-    resend.restart();
-    setCode('');
+    if (resend.isRunning || sendCode.isPending) return;
+
+    verifyCode.reset();
+    sendCode.mutate(email, {
+      onSuccess: () => {
+        expiry.restart();
+        resend.restart();
+        setCode('');
+      },
+    });
+  };
+
+  const handleVerifyCode = (): void => {
+    if (verifyCode.isPending) return;
+    verifyCode.mutate({ email, token: code }, { onSuccess: () => setStep(3) });
   };
 
   const handleReset = (): void => {
-    // TODO: 비밀번호 재설정 API
-    router.replace('/');
+    if (reset.isPending) return;
+
+    reset.mutate(password, {
+      onSuccess: () => {
+        expiry.stop();
+        resend.stop();
+        // 코드 확인 시점에 이미 로그인된 상태다. 그대로 안쪽으로 보내도 되지만,
+        // 방금 바꾼 비밀번호로 한 번 들어가 보게 하는 편이 덜 헷갈린다.
+        router.replace('/');
+      },
+    });
   };
 
   return (
@@ -78,17 +122,25 @@ export function FindPasswordScreen(): React.JSX.Element {
           <Input
             placeholder="이메일 주소"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(next) => {
+              setEmail(next);
+              if (sendCode.isError) sendCode.reset();
+            }}
+            status={sendError === undefined ? 'default' : 'error'}
+            helperText={sendError}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
             textContentType="emailAddress"
+            editable={!sendCode.isPending}
+            onSubmitEditing={handleSendCode}
           />
           <Button
             label="인증코드 발송"
             fullWidth
             size="lg"
             disabled={email.trim().length === 0}
+            loading={sendCode.isPending}
             onPress={handleSendCode}
           />
           <View style={styles.footnote}>
@@ -119,16 +171,33 @@ export function FindPasswordScreen(): React.JSX.Element {
             </Text>
           </View>
 
-          <OtpInput length={CODE_LENGTH} value={code} onChange={setCode} />
+          <OtpInput
+            length={CODE_LENGTH}
+            value={code}
+            onChange={(next) => {
+              setCode(next);
+              if (verifyCode.isError) verifyCode.reset();
+            }}
+          />
+
+          {/* 코드 확인 실패와 재발송 실패가 같은 자리를 쓴다. 한 번에 하나만 난다. */}
+          {(verifyError ?? sendError) !== undefined && (
+            <Text variant="footnote" color="danger">
+              {verifyError ?? sendError}
+            </Text>
+          )}
 
           <View style={styles.resendRow}>
             <PressableScale
               accessibilityRole="button"
               scaleTo={0.94}
-              disabled={resend.isRunning}
+              disabled={resend.isRunning || sendCode.isPending}
               onPress={handleResend}
             >
-              <Text variant="caption" color={resend.isRunning ? 'disabledText' : 'primaryText'}>
+              <Text
+                variant="caption"
+                color={resend.isRunning || sendCode.isPending ? 'disabledText' : 'primaryText'}
+              >
                 코드 재발송
               </Text>
             </PressableScale>
@@ -144,7 +213,8 @@ export function FindPasswordScreen(): React.JSX.Element {
             fullWidth
             size="lg"
             disabled={code.length < CODE_LENGTH || !expiry.isRunning}
-            onPress={() => setStep(3)}
+            loading={verifyCode.isPending}
+            onPress={handleVerifyCode}
           />
         </Appear>
       )}
@@ -154,21 +224,48 @@ export function FindPasswordScreen(): React.JSX.Element {
           <Text variant="heading">새 비밀번호를 설정해주세요</Text>
           <PasswordFields
             password={password}
-            onPasswordChange={setPassword}
+            onPasswordChange={(next) => {
+              setPassword(next);
+              if (reset.isError) reset.reset();
+            }}
             confirm={confirm}
             onConfirmChange={setConfirm}
           />
+          {resetError !== undefined && (
+            <Text variant="footnote" color="danger">
+              {resetError}
+            </Text>
+          )}
           <Button
             label="비밀번호 변경 완료"
             fullWidth
             size="lg"
             disabled={!isValidPassword(password) || password !== confirm}
+            loading={reset.isPending}
             onPress={handleReset}
           />
         </Appear>
       )}
     </AuthCard>
   );
+}
+
+/**
+ * 발송 실패 문구.
+ *
+ * **같은 `otp_disabled` 코드가 흐름에 따라 뜻이 다르다.** 회원가입
+ * (`shouldCreateUser: true`)에서는 "OTP 가입이 꺼져 있다"는 콘솔 설정 문제지만,
+ * 여기서는 `shouldCreateUser: false` 라 **"그 이메일로 가입된 계정이 없다"** 는
+ * 뜻으로 온다. 기기에서 눌러보고 확인했다.
+ *
+ * 그래서 공용 문구를 그대로 쓰면 "지금은 인증코드로 가입할 수 없습니다"가 떠서
+ * 보호자가 이메일을 다시 볼 생각을 못 한다.
+ */
+function sendCodeErrorMessage(error: unknown): string {
+  if (error instanceof AuthError && error.code === 'otp_disabled') {
+    return '가입되지 않은 이메일이에요. 다시 확인해주세요.';
+  }
+  return authErrorMessage(error, '인증코드를 보내지 못했습니다. 이메일을 확인해주세요.');
 }
 
 const styles = StyleSheet.create({

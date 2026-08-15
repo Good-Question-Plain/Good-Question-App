@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '@/shared/config/env';
 
 import { setAuthToken } from './client';
+import { queryClient } from './queryClient';
 
 /**
  * Supabase 클라이언트.
@@ -42,8 +43,15 @@ export function startAuthTokenSync(): () => void {
     setAuthToken(data.session?.access_token ?? null);
   });
 
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
     setAuthToken(session?.access_token ?? null);
+
+    // 로그아웃하면 받아둔 서버 데이터를 전부 버린다. 안 지우면 다른 계정으로
+    // 다시 로그인했을 때 **이전 사용자의 아이 목록·단어장이 잠깐 그대로 보인다**
+    // (TanStack Query 는 캐시를 먼저 보여주고 뒤에서 다시 받아온다).
+    if (event === 'SIGNED_OUT') {
+      queryClient.clear();
+    }
   });
 
   return () => data.subscription.unsubscribe();

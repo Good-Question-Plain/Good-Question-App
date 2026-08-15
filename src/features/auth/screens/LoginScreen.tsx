@@ -15,10 +15,14 @@ import {
   type SocialProvider,
 } from '@/shared/ui';
 
+import { useEmailLogin } from '../hooks/useEmailLogin';
+import { authErrorMessage } from '../model/authErrors';
+
 /**
  * 로그인 화면 (Figma 10:1100).
  *
- * 지금은 화면만 붙인 상태로, 실제 인증은 백엔드 API 가 나오면 `api/` 에 붙인다.
+ * 이메일/비밀번호는 Supabase 로 직접 보낸다 (`useEmailLogin`). 우리 백엔드에는
+ * 로그인 엔드포인트가 없다 — 서버는 Supabase 가 발급한 JWT 를 검증만 한다.
  *
  * 진입할 때 로고 → 폼 → 소셜 → 하단 링크 순으로 짧게 순차 등장한다.
  * 시선이 위에서 아래로 자연스럽게 흐르게 하려는 것이고, 전체가 240ms 안에
@@ -28,15 +32,37 @@ export function LoginScreen(): React.JSX.Element {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const login = useEmailLogin();
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
+  // 디자인에 에러 시안이 없다. 새 문구줄을 만들어 레이아웃을 밀어내는 대신
+  // 이미 있는 Input 의 error 상태를 쓴다. 어느 쪽이 틀렸는지는 알려주지 않으므로
+  // (계정 존재 여부가 새어나간다) 문구는 비밀번호 칸 아래 한 번만 띄운다.
+  const errorMessage = login.isError
+    ? authErrorMessage(login.error, '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.')
+    : undefined;
 
   const handleSubmit = (): void => {
-    // TODO: 로그인 API 연동
+    if (!canSubmit || login.isPending) return;
+
+    login.mutate(
+      { email, password },
+      {
+        // 로그인 화면으로 되돌아올 수 없게 replace 로 바꿔치운다.
+        // 아이를 고르는 화면이 다음 단계다 (가입 직후라면 아이 등록으로 간다).
+        onSuccess: () => router.replace('/child/select'),
+      },
+    );
+  };
+
+  /** 입력을 고치면 이전 실패 표시를 지운다. 빨간 테두리가 남아 있으면 다시 눌러도 고쳐진 건지 알 수 없다. */
+  const clearError = (): void => {
+    if (login.isError) login.reset();
   };
 
   const handleSocialPress = (_provider: SocialProvider): void => {
-    // TODO: 소셜 로그인 연동
+    // TODO: 소셜 로그인 연동 (supabase.auth.signInWithOAuth + goodquestion://oauth 딥링크).
+    // 콘솔에 어떤 provider 가 Enabled 인지, Redirect URL 이 등록됐는지 확인이 먼저다.
   };
 
   // 태블릿 소프트 키보드는 화면 절반가량을 덮는다. scrollable 로 두지 않으면
@@ -59,22 +85,41 @@ export function LoginScreen(): React.JSX.Element {
               label="이메일"
               placeholder="이메일을 입력하세요"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(next) => {
+                setEmail(next);
+                clearError();
+              }}
+              status={errorMessage === undefined ? 'default' : 'error'}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
+              editable={!login.isPending}
+              onSubmitEditing={handleSubmit}
             />
             <Input
               label="비밀번호"
               placeholder="비밀번호을 입력하세요"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(next) => {
+                setPassword(next);
+                clearError();
+              }}
+              status={errorMessage === undefined ? 'default' : 'error'}
+              helperText={errorMessage}
               secureTextEntry
               autoComplete="password"
               textContentType="password"
+              editable={!login.isPending}
+              onSubmitEditing={handleSubmit}
             />
-            <Button label="계속하기" fullWidth disabled={!canSubmit} onPress={handleSubmit} />
+            <Button
+              label="계속하기"
+              fullWidth
+              disabled={!canSubmit}
+              loading={login.isPending}
+              onPress={handleSubmit}
+            />
           </View>
 
           <Divider label="또는" />

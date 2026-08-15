@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthGate } from '@/features/auth';
 import { queryClient, startAuthTokenSync } from '@/shared/api';
 import { colors, fontAssets } from '@/shared/theme';
 
@@ -48,12 +49,15 @@ export default function RootLayout(): React.JSX.Element | null {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          />
+          {/* 세션이 없으면 안쪽 화면(딥링크 포함)을 못 열게 막는다. */}
+          <AuthGate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            />
+          </AuthGate>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

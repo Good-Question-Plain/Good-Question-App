@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 import type { SvgProps } from 'react-native-svg';
 
 import { avatarTints, colors, radius, spacing } from '@/shared/theme';
@@ -10,6 +10,11 @@ import { Text } from './Text';
 export interface AvatarOptionProps {
   label: string;
   Icon: FC<SvgProps>;
+  /**
+   * 사진을 대신 채운다. 있으면 `Icon` 대신 이 그림이 원 안을 꽉 채운다.
+   * 아이가 올린 프로필 사진에 쓴다.
+   */
+  imageUri?: string;
   /** 배경 톤을 고르는 값. 목록에서의 순서를 그대로 넣으면 된다. */
   tintIndex?: number;
   selected?: boolean;
@@ -29,6 +34,7 @@ export interface AvatarOptionProps {
 export function AvatarOption({
   label,
   Icon,
+  imageUri,
   tintIndex = 0,
   selected = false,
   dashed = false,
@@ -37,6 +43,7 @@ export function AvatarOption({
   style,
 }: AvatarOptionProps): React.JSX.Element {
   const tint = avatarTints[tintIndex % avatarTints.length];
+  const hasPhoto = imageUri !== undefined && imageUri.length > 0;
 
   return (
     <PressableScale
@@ -52,11 +59,18 @@ export function AvatarOption({
         style={[
           styles.circle,
           { width: size, height: size, borderRadius: size / 2 },
-          dashed ? styles.dashed : { backgroundColor: selected ? avatarTints[0] : tint },
+          dashed && !hasPhoto
+            ? styles.dashed
+            : { backgroundColor: selected ? avatarTints[0] : tint },
           selected && styles.selected,
         ]}
       >
-        <Icon width={size * 0.64} height={size * 0.64} color={colors.textSubtle} />
+        {hasPhoto ? (
+          // 원 안을 꽉 채운다. `cover` 라야 세로 사진도 여백 없이 들어간다.
+          <Image source={{ uri: imageUri }} style={styles.photo} resizeMode="cover" />
+        ) : (
+          <Icon width={size * 0.64} height={size * 0.64} color={colors.textSubtle} />
+        )}
       </View>
       {/* 이름은 최대 20자까지 들어올 수 있는데 아바타 폭은 72~132dp 라 반드시 잘라야 한다. */}
       <Text
@@ -81,6 +95,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: 'transparent',
+    // 사진이 원 밖으로 삐져나오지 않게 자른다.
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
   selected: {
     borderColor: colors.primary,

@@ -21,19 +21,19 @@ const palette = {
   primary700: '#B86200',
   primary800: '#824200',
 
-  // neutral (Figma: Netutral/*)
+  // neutral (Figma: Netutral/*) — 아래 일곱은 Variable 로 등록돼 있다.
   neutral0: '#FFFFFF',
   neutral50: '#F8F9FA',
+  neutral200: '#E9ECEF',
   neutral300: '#DEE2E6',
   neutral400: '#CED4DA',
   neutral500: '#ADB5BD',
-  // 아래 넷은 Variable 로 등록돼 있지 않고 디자인에 하드코딩돼 있던 값이다.
-  // 모두 Bootstrap gray 스케일과 같은 계열이라 해당 자리에 맞춰 넣었다.
-  // 디자이너가 나중에 Variable 로 승격하면 이름만 맞추면 된다.
-  neutral100: '#F1F3F5',
-  neutral200: '#E9ECEF',
   neutral600: '#868E96',
   neutral700: '#495057',
+  // 아래 둘만 Variable 미등록이고 디자인에 하드코딩돼 있던 값이다.
+  // Bootstrap gray 스케일과 같은 계열이라 해당 자리에 맞춰 넣었다.
+  // 디자이너가 나중에 Variable 로 승격하면 이름만 맞추면 된다.
+  neutral100: '#F1F3F5',
   neutral900: '#212529',
 
   /** 파괴적 액션(회원탈퇴 등). Variable 미등록, 모달에 하드코딩된 값. */
@@ -53,9 +53,22 @@ const palette = {
   blue50: '#E7F5FF',
   brown900: '#4D2500',
 
-  // 소셜 로그인 브랜드
+  // 소셜 로그인 브랜드. Figma 에는 `kakao/logo` 와 `Netutral/1000` 두 Variable 이
+  // 같은 #000000 으로 등록돼 있는데, 검정을 쓰는 자리가 카카오 로고뿐이라 하나로 뒀다.
   kakaoLogo: '#000000',
 } as const;
+
+/**
+ * **Figma Variable 대조 (2026-08-15 확인).**
+ *
+ * 퍼블리싱 섹션(182:303)·보호자 리포트(287:262)·이야기(229:352)에서 쓰이는
+ * Variable 17개를 뽑아 위 값들과 1:1로 맞춰봤고 **전부 일치**한다.
+ *
+ * Variable 로 등록돼 있지 않은 값은 아래 다섯 갈래뿐이고, 각각 왜 필요한지는
+ * 해당 줄 주석에 적혀 있다: `neutral100/900`, `danger500`, `success500`,
+ * `warning500`, `peach*` · `blue50` · `brown900`.
+ * **디자이너가 이것들을 Variable 로 승격하면 이름만 맞추면 된다.**
+ */
 
 export const colors = {
   // 배경

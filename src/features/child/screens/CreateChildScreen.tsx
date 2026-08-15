@@ -14,6 +14,11 @@ import {
   type AvatarId,
 } from '@/shared/ui';
 
+import { useCreateChild } from '../api/queries';
+import { usePickProfileImage } from '../hooks/usePickProfileImage';
+import { useActiveChildStore } from '../model/activeChildStore';
+import { FALLBACK_AVATAR_ID } from '../model/types';
+
 /**
  * 아이 프로필 만들기 (Figma 92:808).
  *
@@ -23,12 +28,26 @@ import {
  */
 export function CreateChildScreen(): React.JSX.Element {
   const router = useRouter();
-  const [avatarId, setAvatarId] = useState<AvatarId>('bear');
+  const [avatarId, setAvatarId] = useState<AvatarId>(FALLBACK_AVATAR_ID);
   const [name, setName] = useState('');
+  const createChild = useCreateChild();
+  const { selectChild } = useActiveChildStore();
+  const photo = usePickProfileImage();
 
   const handleSubmit = (): void => {
-    // TODO: 아이 등록 API
-    router.replace('/child/select');
+    if (createChild.isPending) return;
+
+    createChild.mutate(
+      { name, avatarId, photo: photo.picked ?? undefined },
+      {
+        onSuccess: (child) => {
+          // 방금 만든 아이를 바로 활성으로 둔다. 선택 화면에서 다시 찾아
+          // 누르게 하면 등록했는데 아무 일도 안 일어난 것처럼 보인다.
+          selectChild(child.id);
+          router.replace('/child/select');
+        },
+      },
+    );
   };
 
   return (
@@ -49,27 +68,48 @@ export function CreateChildScreen(): React.JSX.Element {
             label={avatar.label}
             Icon={avatar.Icon}
             tintIndex={index}
-            selected={avatar.id === avatarId}
-            onPress={() => setAvatarId(avatar.id)}
+            // 사진을 골라두면 아바타 선택은 해제된다 — 둘 중 하나만 쓴다.
+            selected={photo.picked === null && avatar.id === avatarId}
+            onPress={() => {
+              setAvatarId(avatar.id);
+              photo.clear();
+            }}
             style={styles.gridItem}
           />
         ))}
         <AvatarOption
-          label="사진 올리기"
+          label={photo.picked === null ? '사진 올리기' : '사진 바꾸기'}
           Icon={CameraIcon}
+          imageUri={photo.picked?.uri}
           dashed
+          selected={photo.picked !== null}
+          onPress={() => void photo.pick()}
           style={styles.gridItem}
-          // TODO: 이미지 선택기 연동 (expo-image-picker)
         />
       </View>
 
-      <Input placeholder="아이 이름" value={name} onChangeText={setName} maxLength={20} />
+      <Input
+        placeholder="아이 이름"
+        value={name}
+        onChangeText={(next) => {
+          setName(next);
+          if (createChild.isError) createChild.reset();
+        }}
+        maxLength={20}
+        status={createChild.isError ? 'error' : 'default'}
+        helperText={
+          createChild.isError ? '아이를 등록하지 못했어요. 잠시 후 다시 시도해주세요.' : undefined
+        }
+        editable={!createChild.isPending}
+        onSubmitEditing={handleSubmit}
+      />
 
       <Button
         label="등록 완료"
         fullWidth
         size="lg"
         disabled={name.trim().length === 0}
+        loading={createChild.isPending}
         onPress={handleSubmit}
       />
     </AuthCard>

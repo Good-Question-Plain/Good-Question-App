@@ -1,26 +1,53 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/shared/theme';
-import { Appear, AvatarOption, Button, findAvatar, PlusIcon, Screen, Text } from '@/shared/ui';
+import {
+  Appear,
+  AvatarOption,
+  Button,
+  EmptyState,
+  findAvatar,
+  PlusIcon,
+  Screen,
+  Text,
+} from '@/shared/ui';
 
-import { MOCK_CHILDREN } from '../model/types';
+import { useActiveChild } from '../hooks/useActiveChild';
+import { FALLBACK_AVATAR_ID } from '../model/types';
 
 /**
  * 아이 프로필 선택 (Figma 92:889).
  *
  * 아이가 직접 자기 얼굴을 고르는 화면이라 아바타를 크게 놓았다.
  * 마지막 칸은 아이 추가로, 프로필 만들기 화면으로 보낸다.
+ *
+ * 고른 아이는 전역 스토어에 남아 홈·리포트까지 그대로 이어진다.
  */
 export function SelectChildScreen(): React.JSX.Element {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(MOCK_CHILDREN[0]?.id ?? null);
+  const { activeChild, children, isLoading, isError, selectChild } = useActiveChild();
 
   const handleStart = (): void => {
-    // TODO: 선택한 아이를 활성 프로필로 저장
     router.replace('/story');
   };
+
+  // 아직 아이가 하나도 없으면 고를 게 없다 — 만들기 화면이 다음 단계다.
+  // 가입 직후 첫 진입이 이 경우다.
+  if (!isLoading && !isError && children.length === 0) {
+    return (
+      <Screen>
+        <View style={styles.empty}>
+          <EmptyState
+            title="아직 등록된 아이가 없어요"
+            description="아이를 등록하면 이야기를 시작할 수 있어요"
+            style={styles.emptyText}
+          />
+          <Button label="아이 등록하기" size="lg" onPress={() => router.replace('/child/create')} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scrollable>
@@ -34,32 +61,41 @@ export function SelectChildScreen(): React.JSX.Element {
           </Text>
         </Appear>
 
-        <Appear style={styles.row} delay={60}>
-          {MOCK_CHILDREN.map((child, index) => (
-            <AvatarOption
-              key={child.id}
-              label={child.name}
-              Icon={findAvatar(child.avatarId).Icon}
-              tintIndex={index}
-              size={AVATAR_SIZE}
-              selected={child.id === selectedId}
-              onPress={() => setSelectedId(child.id)}
-            />
-          ))}
-          <AvatarOption
-            label="추가하기"
-            Icon={PlusIcon}
-            dashed
-            size={AVATAR_SIZE}
-            onPress={() => router.push('/child/create')}
+        {isError ? (
+          <EmptyState
+            title="아이 목록을 불러오지 못했어요"
+            description="연결 상태를 확인하고 다시 시도해주세요"
           />
-        </Appear>
+        ) : (
+          <Appear style={styles.row} delay={60}>
+            {children.map((child, index) => (
+              <AvatarOption
+                key={child.id}
+                label={child.name}
+                Icon={findAvatar(child.avatarId ?? FALLBACK_AVATAR_ID).Icon}
+                // 사진을 올린 아이는 아바타 대신 그 사진이 뜬다.
+                imageUri={child.photoUrl ?? undefined}
+                tintIndex={index}
+                size={AVATAR_SIZE}
+                selected={child.id === activeChild?.id}
+                onPress={() => selectChild(child.id)}
+              />
+            ))}
+            <AvatarOption
+              label="추가하기"
+              Icon={PlusIcon}
+              dashed
+              size={AVATAR_SIZE}
+              onPress={() => router.push('/child/create')}
+            />
+          </Appear>
+        )}
 
         <Appear delay={120}>
           <Button
             label="시작하기"
             size="lg"
-            disabled={selectedId === null}
+            disabled={activeChild === undefined}
             onPress={handleStart}
             style={styles.cta}
           />
@@ -94,5 +130,15 @@ const styles = StyleSheet.create({
   },
   cta: {
     paddingHorizontal: 108, // 디자인 실측
+  },
+  /** 디자인에 없는 상태다 — 아이가 하나도 없을 때 막다른 길이 되지 않게 직접 만들었다. */
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['2xl'],
+  },
+  emptyText: {
+    flex: 0,
   },
 });
