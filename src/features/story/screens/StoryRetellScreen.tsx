@@ -75,11 +75,14 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
   /**
    * 완료 버튼을 열어줄지.
    *
-   * **받아쓰기가 안 되는 상황에서도 열어준다.** 인식기가 없거나 권한이 거부된
-   * 기기에서 글이 안 쌓인다고 버튼을 막으면 아이가 활동에서 못 빠져나온다.
-   * 그때는 빈 텍스트가 서버로 가는데, 이야기를 끝낸 사실 자체는 남는 게 낫다.
+   * **말을 한 번 해보고 멈췄으면 연다.** 받아쓴 글이 있어야만 열면, 조용한 방이나
+   * 발음이 잘 안 잡히는 아이는 **활동에서 영영 못 빠져나온다** — 실제로 인식기가
+   * 정상인데 아무것도 안 잡혀서 버튼이 계속 잠긴 상태를 만났다. 인식기가 없거나
+   * 권한이 막힌 경우(`failure`)도 마찬가지다.
+   *
+   * 그때는 빈 텍스트가 서버로 가지만, **이야기를 끝낸 사실 자체는 남는 게 낫다.**
    */
-  const canFinish = transcript.trim().length > 0 || (spoke && dictation.failure !== null);
+  const canFinish = transcript.trim().length > 0 || (spoke && !recording);
 
   const backButton = (
     <PressableScale
