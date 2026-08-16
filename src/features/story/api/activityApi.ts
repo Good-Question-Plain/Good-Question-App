@@ -1,4 +1,5 @@
 import { request } from '@/shared/api';
+import { toRemoteImageUri } from '@/shared/lib/remoteImage';
 
 /**
  * 이야기 후 활동 API (순서 맞추기 · 다시 말하기).
@@ -48,7 +49,7 @@ export async function fetchPostActivity(sessionId: string): Promise<PostActivity
     cards: dto.cards.map((card) => ({
       sceneId: card.scene_id,
       title: card.title,
-      imageUrl: card.image_url === '' ? null : card.image_url,
+      imageUrl: toRemoteImageUri(card.image_url),
     })),
   };
 }

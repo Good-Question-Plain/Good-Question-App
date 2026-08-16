@@ -1,4 +1,5 @@
 import { request } from '@/shared/api';
+import { toRemoteImageUri } from '@/shared/lib/remoteImage';
 
 /**
  * 학습 세션 API (`/progress`).
@@ -129,7 +130,7 @@ function toStep(dto: SessionStepDto): SessionStep {
     kind: dto.kind,
     sceneId: dto.scene_id,
     sceneDescription: dto.scene_description,
-    imageUrl: dto.image_url === '' ? null : dto.image_url,
+    imageUrl: toRemoteImageUri(dto.image_url),
     characterName: dto.character_name,
     characterOpening: dto.character_opening,
     characterClosing: dto.character_closing,

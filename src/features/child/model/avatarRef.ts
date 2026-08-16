@@ -1,3 +1,4 @@
+import { toRemoteImageUri } from '@/shared/lib/remoteImage';
 import { AVATARS, type AvatarId } from '@/shared/ui';
 
 /**
@@ -60,11 +61,8 @@ export function parseProfileImage(raw: string | null | undefined): ProfileImageR
     return { avatarId: known ? (marker as AvatarId) : null, photoUrl: null };
   }
 
-  if (raw.startsWith('http://') || raw.startsWith('https://')) {
-    return { avatarId: null, photoUrl: raw };
-  }
-
-  return { avatarId: null, photoUrl: null };
+  // 사진으로 인정하는 규칙은 장면 그림·썸네일과 같다 (`shared/lib/remoteImage`).
+  return { avatarId: null, photoUrl: toRemoteImageUri(raw) };
 }
 
 /**

@@ -1,4 +1,5 @@
 import { request } from '@/shared/api';
+import { toRemoteImageUri } from '@/shared/lib/remoteImage';
 
 /**
  * 이야기 목록 / 메인 화면 API.
@@ -54,7 +55,7 @@ function toSummary(dto: StorySummaryDto): StorySummary {
     title: dto.title,
     minutes: dto.estimated_minutes,
     topics: dto.topics,
-    thumbnailUrl: dto.thumbnail_url === '' ? null : dto.thumbnail_url,
+    thumbnailUrl: toRemoteImageUri(dto.thumbnail_url),
   };
 }
 
@@ -110,8 +111,7 @@ export async function fetchMainPage(childId: string): Promise<MainPage> {
         : {
             storyId: dto.continue_story.story_id,
             title: dto.continue_story.title,
-            thumbnailUrl:
-              dto.continue_story.thumbnail_url === '' ? null : dto.continue_story.thumbnail_url,
+            thumbnailUrl: toRemoteImageUri(dto.continue_story.thumbnail_url),
             // 화면의 진행바는 0~1 을 받는다. 여기서 한 번만 바꿔둔다.
             ratio: dto.continue_story.progress_percentage / 100,
           },
