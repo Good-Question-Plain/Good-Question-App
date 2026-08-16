@@ -17,6 +17,23 @@ interface StorySummaryDto {
   thumbnail_url: string | null;
   estimated_minutes: number;
   topics: string[];
+  /** 서버가 주는데 명세에도 화면에도 없다. 쓰지 않는다. */
+  difficulty?: string;
+}
+
+/**
+ * 목록 응답에서 배열을 꺼낸다.
+ *
+ * **명세는 배열인데 서버는 `{ items, total, limit, offset }` 로 감싸서 준다.**
+ * 실기기에서 확인했다 — 이걸 그대로 `.map` 하면 화면이 통째로 빈다
+ * (단어장에서도 같은 일이 있었다: `parseWordList`).
+ * 어느 쪽이 배포될지 앱이 정할 수 없으니 둘 다 받는다.
+ */
+function toStoryList(
+  payload: StorySummaryDto[] | { items?: StorySummaryDto[] },
+): StorySummaryDto[] {
+  if (Array.isArray(payload)) return payload;
+  return payload.items ?? [];
 }
 
 /** 목록에 쓰는 이야기 한 편. 화면이 쓰던 `Story` 와 달리 그림이 URL 로 온다. */
@@ -46,11 +63,11 @@ function toSummary(dto: StorySummaryDto): StorySummary {
  * 해당하는 이야기가 없으면 빈 배열이다(404 가 아니다).
  */
 export async function fetchStories(topic?: string): Promise<StorySummary[]> {
-  const dtos = await request<StorySummaryDto[]>({
+  const payload = await request<StorySummaryDto[] | { items?: StorySummaryDto[] }>({
     url: '/stories',
     params: topic === undefined || topic === '전체' ? undefined : { topic },
   });
-  return dtos.map(toSummary);
+  return toStoryList(payload).map(toSummary);
 }
 
 /** 읽다 만 이야기. 없으면 `continue_story` 가 null 로 온다. */
@@ -74,7 +91,7 @@ interface MainPageDto {
     thumbnail_url: string | null;
     progress_percentage: number;
   } | null;
-  recommended_stories: StorySummaryDto[];
+  recommended_stories: StorySummaryDto[] | { items?: StorySummaryDto[] };
 }
 
 /**
@@ -98,6 +115,7 @@ export async function fetchMainPage(childId: string): Promise<MainPage> {
             // 화면의 진행바는 0~1 을 받는다. 여기서 한 번만 바꿔둔다.
             ratio: dto.continue_story.progress_percentage / 100,
           },
-    recommended: dto.recommended_stories.map(toSummary),
+    // `/stories` 처럼 감싸서 올 수 있다 (`toStoryList` 주석 참고).
+    recommended: toStoryList(dto.recommended_stories).map(toSummary),
   };
 }
