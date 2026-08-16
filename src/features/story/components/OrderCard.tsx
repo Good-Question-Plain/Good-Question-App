@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/shared/theme';
 import { PressableScale, Text } from '@/shared/ui';
@@ -27,7 +27,7 @@ export function OrderCard({
   size = 'md',
   onPress,
 }: OrderCardProps): React.JSX.Element {
-  const { label, Icon } = card;
+  const { label, Icon, imageUrl } = card;
   const selected = order !== null;
   const small = size === 'sm';
   const iconSize = small ? SMALL_ICON_SIZE : ICON_SIZE;
@@ -45,7 +45,18 @@ export function OrderCard({
         ]}
       >
         <View style={[styles.tile, selected && styles.tileSelected]}>
-          <Icon width={iconSize} height={iconSize} />
+          {/* 서버 그림이 있으면 그걸 쓰고, 없으면 번들 아이콘으로 떨어진다.
+              둘 다 없으면 빈 타일이 남는데 카드 크기는 그대로라 배열은 안 깨진다. */}
+          {imageUrl !== undefined ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: iconSize, height: iconSize }}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            Icon !== undefined && <Icon width={iconSize} height={iconSize} />
+          )}
         </View>
         <Text
           variant={small ? 'captionSmall' : 'footnote'}

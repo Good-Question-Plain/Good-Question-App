@@ -16,11 +16,16 @@ import {
   Text,
 } from '@/shared/ui';
 
+import { usePostActivity, useStoryProgress, useSubmitRetelling } from '../api/queries';
 import { OrderCard } from '../components/OrderCard';
-import { findActivity } from '../model/activity';
-import { findStory } from '../model/types';
+import { useChildRecorder } from '../hooks/useChildRecorder';
 
 const ACTIVITY_STEP = 2;
+
+export interface StoryRetellScreenProps {
+  /** 활동은 아이별 세션에 매달려 있다. 라우트가 넘긴다. */
+  childId: string;
+}
 const ACTIVITY_TOTAL = 2;
 
 /**
@@ -29,14 +34,29 @@ const ACTIVITY_TOTAL = 2;
  * 아이가 앞에서 맞춘 카드와 핵심 단어를 보면서 이야기를 자기 말로 다시 한다.
  * 받아쓴 글이 화면 한가운데 크게 남는 게 이 활동의 결과물이다.
  */
-export function StoryRetellScreen(): React.JSX.Element {
+export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const story = findStory(id);
-  const activity = findActivity(id);
+  const storyId = id ?? '';
 
-  const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const { data: progress } = useStoryProgress(childId, storyId);
+  const sessionId = progress?.sessionId ?? '';
+  const { data: activity } = usePostActivity(sessionId);
+  const submit = useSubmitRetelling(sessionId);
+  const recorder = useChildRecorder();
+
+  /**
+   * 받아쓴 글.
+   *
+   * **아직 채울 방법이 없다.** `POST .../retell` 은 완성된 텍스트를 받는데,
+   * 아이 음성을 글로 바꿔줄 엔드포인트가 명세에 없다 (대화의 `speak` 는 장면에
+   * 묶여 있어 여기서 못 쓴다). 녹음은 해두고, STT 가 생기면 그 결과를 여기에
+   * 넣으면 화면 나머지는 그대로 동작한다. **백엔드 확인 대상.**
+   */
+  const [transcript] = useState('');
+  /** 한 번이라도 말했는지. 완료 버튼을 열어주는 조건이다. */
+  const [spoke, setSpoke] = useState(false);
+  const recording = recorder.isRecording;
 
   const backButton = (
     <PressableScale
@@ -59,23 +79,34 @@ export function StoryRetellScreen(): React.JSX.Element {
       <Screen>
         <View style={styles.page}>
           {backButton}
-          <EmptyState
-            title="아직 준비 중인 활동이에요"
-            description={`${story?.title ?? '이 이야기'}는 곧 활동도 만들 수 있어요`}
-          />
+          <EmptyState title="활동을 준비하고 있어요" description="잠시만 기다려주세요" />
         </View>
       </Screen>
     );
   }
 
+  /**
+   * 마이크.
+   *
+   * **받아쓴 글이 아직 화면에 안 나온다.** `POST .../retell` 은 완성된 텍스트를
+   * 받는데, 아이 음성을 글로 바꿔줄 엔드포인트가 명세에 없다
+   * (대화의 `speak` 는 장면에 묶여 있어 여기서 못 쓴다).
+   * 녹음은 해두고, 서버에 STT 가 생기면 그 결과를 `transcript` 에 넣으면 된다.
+   */
   const handleMicPress = (): void => {
     if (recording) {
-      setRecording(false);
+      void recorder.stop().then(() => setSpoke(true));
       return;
     }
-    setRecording(true);
-    // TODO: STT 연동. 지금은 누르는 즉시 준비된 문장이 받아써진 것으로 친다.
-    setTranscript(activity.retellSample);
+    void recorder.start();
+  };
+
+  const handleDone = (): void => {
+    if (submit.isPending) return;
+
+    submit.mutate(transcript, {
+      onSuccess: () => router.replace({ pathname: '/story/[id]/done', params: { id: storyId } }),
+    });
   };
 
   return (
@@ -92,7 +123,9 @@ export function StoryRetellScreen(): React.JSX.Element {
               label="완료"
               // 디자인은 h38 인데 아이가 누르는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
               size="lg"
-              onPress={() => router.replace({ pathname: '/story/[id]/done', params: { id } })}
+              disabled={!spoke}
+              loading={submit.isPending}
+              onPress={handleDone}
             />
           </View>
         </View>
@@ -146,7 +179,16 @@ export function StoryRetellScreen(): React.JSX.Element {
               <Text variant="captionStrong">이야기 카드</Text>
               <View style={styles.cardStrip}>
                 {activity.cards.map((card, index) => (
-                  <OrderCard key={card.id} card={card} order={index + 1} size="sm" />
+                  <OrderCard
+                    key={card.sceneId}
+                    card={{
+                      id: card.sceneId,
+                      label: card.title,
+                      imageUrl: card.imageUrl ?? undefined,
+                    }}
+                    order={index + 1}
+                    size="sm"
+                  />
                 ))}
               </View>
             </View>
@@ -154,9 +196,13 @@ export function StoryRetellScreen(): React.JSX.Element {
             <View style={styles.keywordColumn}>
               <Text variant="captionStrong">핵심 단어</Text>
               <View style={styles.keywordRow}>
-                {activity.keywords.map((keyword) => (
-                  <Chip key={keyword} label={keyword} size="lg" style={styles.keyword} />
-                ))}
+                {/* 핵심 단어는 정답을 맞힐 때 서버가 준다. 여기서는 카드 제목을
+                    대신 늘어놓는다 — 활동 화면에서 방금 본 것과 같은 말들이다. */}
+                {activity.cards
+                  .map((card) => card.title)
+                  .map((keyword) => (
+                    <Chip key={keyword} label={keyword} size="lg" style={styles.keyword} />
+                  ))}
               </View>
             </View>
           </View>

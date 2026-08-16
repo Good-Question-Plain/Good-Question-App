@@ -10,7 +10,7 @@ export type {
   StoryReport,
 } from './api/reportApi';
 export { ReportScreen, type ReportScreenProps } from './screens/ReportScreen';
-export { findReport, formatReportDate, MOCK_REPORTS, REPORT_TABS } from './model/types';
+export { formatReportDate, REPORT_TABS } from './model/types';
 export type {
   LearningReport,
   ReportSkill,

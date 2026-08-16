@@ -35,6 +35,12 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "아이가 이야기 속 인물과 말하려면 마이크가 필요해요."
+        }
       ]
     ],
     "experiments": {

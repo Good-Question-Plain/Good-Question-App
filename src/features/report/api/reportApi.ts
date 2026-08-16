@@ -76,6 +76,8 @@ export interface StoryReport {
   nextStoryId: string | null;
   /** `status === 'failed'` 일 때만 채워진다. */
   failureReason: string | null;
+  /** 생성이 끝난 시각 (ISO 8601). 아직 만드는 중이면 null. */
+  completedAt: string | null;
 }
 
 interface TraitDto {
@@ -121,6 +123,7 @@ interface StoryReportDto {
   previous_story_id: string | null;
   next_story_id: string | null;
   failure_reason: string | null;
+  completed_at: string | null;
 }
 
 function toTrait(dto: TraitDto): ReportTrait {
@@ -190,6 +193,7 @@ export async function fetchStoryReport(storyId: string, childId: string): Promis
     previousStoryId: dto.previous_story_id,
     nextStoryId: dto.next_story_id,
     failureReason: dto.failure_reason,
+    completedAt: dto.completed_at,
   };
 }
 
