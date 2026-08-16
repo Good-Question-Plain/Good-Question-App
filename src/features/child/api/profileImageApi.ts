@@ -54,15 +54,27 @@ export async function uploadProfileImage({
     url: '/users/profile-image/presigned-url',
     data: { content_type: contentType, target },
   });
-
   // 로컬 파일을 읽어 그대로 올린다. RN 의 fetch 는 file:// uri 를 Blob 으로
   // 읽을 수 있어서 파일 시스템 모듈을 따로 넣지 않아도 된다.
-  const picked = await fetch(uri);
-  const body = await picked.blob();
+  const raw = await (await fetch(uri)).blob();
+
+  /**
+   * **Blob 의 `type` 을 반드시 맞춰야 한다.**
+   *
+   * React Native 는 Blob 을 body 로 보낼 때 **그 Blob 의 `type` 으로
+   * `Content-Type` 헤더를 덮어쓴다.** `fetch(uri).blob()` 로 읽은 파일은 type 이
+   * 비어 있어서, 아래에서 헤더를 직접 줘도 실제로는 **빈 Content-Type** 이 나간다.
+   *
+   * presigned URL 은 `content-type` 을 서명에 포함해서 만들어지므로
+   * (`X-Amz-SignedHeaders=content-type;host`), 값이 다르면 S3 가
+   * **403 `SignatureDoesNotMatch`** 로 거부한다. 기기에서 S3 응답의
+   * `CanonicalRequest` 에 `content-type:` 이 빈 줄로 찍히는 걸 확인했다.
+   */
+  const body = raw.type === contentType ? raw : new Blob([raw], { type: contentType });
 
   const uploaded = await fetch(uploadUrl, {
     method: 'PUT',
-    // presigned URL 은 서명할 때 정한 Content-Type 과 정확히 같아야 통과한다.
+    // 서명할 때 정한 Content-Type 과 정확히 같아야 통과한다.
     headers: { 'Content-Type': contentType },
     body,
   });

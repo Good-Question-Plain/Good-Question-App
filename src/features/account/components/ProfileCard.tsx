@@ -5,6 +5,8 @@ import { InitialBadge, PencilIcon, PressableScale, Text } from '@/shared/ui';
 
 export interface ProfileCardProps {
   name: string;
+  /** 직접 올린 프로필 사진. 있으면 이름 첫 글자 대신 사진이 뜬다. */
+  photoUrl?: string | null;
   /** 보호자는 이메일, 아이는 "7세" 처럼 한 줄 아래에 붙는 보조 정보. */
   caption: string;
   /** 'parent' 는 큰 카드(주황 배경), 'child' 는 목록에 들어가는 작은 카드. */
@@ -22,6 +24,7 @@ export interface ProfileCardProps {
  */
 export function ProfileCard({
   name,
+  photoUrl,
   caption,
   variant = 'child',
   tintIndex = 0,
@@ -32,7 +35,12 @@ export function ProfileCard({
 
   return (
     <View style={[styles.card, isParent ? styles.parent : styles.child, style]}>
-      <InitialBadge name={name} size={isParent ? 52 : 40} tintIndex={isParent ? 1 : tintIndex} />
+      <InitialBadge
+        name={name}
+        size={isParent ? 52 : 40}
+        tintIndex={isParent ? 1 : tintIndex}
+        photoUrl={photoUrl}
+      />
 
       <View style={styles.text}>
         <Text variant={isParent ? 'label' : 'captionStrong'} numberOfLines={1}>

@@ -12,11 +12,15 @@ import { Text } from './Text';
 export interface ChildSwitcherOption {
   id: string;
   name: string;
+  /** 직접 올린 프로필 사진. 있으면 이름 첫 글자 대신 사진이 뜬다. */
+  photoUrl?: string | null;
 }
 
 export interface ChildSwitcherProps {
   /** 지금 쓰고 있는 아이 */
   name: string;
+  /** 지금 쓰고 있는 아이가 올린 사진. 있으면 알약에도 사진이 뜬다. */
+  photoUrl?: string | null;
   /** 펼쳤을 때 고를 수 있는 아이들 */
   options: readonly ChildSwitcherOption[];
   onSelect: (id: string) => void;
@@ -41,6 +45,7 @@ export interface ChildSwitcherProps {
  */
 export function ChildSwitcher({
   name,
+  photoUrl,
   options,
   onSelect,
   tone = 'background',
@@ -66,7 +71,7 @@ export function ChildSwitcher({
         onPress={open}
         style={[styles.row, styles.pill, toneStyle]}
       >
-        <InitialBadge name={name} size={BADGE_SIZE} />
+        <InitialBadge name={name} size={BADGE_SIZE} photoUrl={photoUrl} />
         <Text variant="chip" numberOfLines={1} style={styles.name}>
           {name}
         </Text>
@@ -94,7 +99,7 @@ export function ChildSwitcher({
               onPress={close}
               style={[styles.row, styles.rowDivided]}
             >
-              <InitialBadge name={name} size={BADGE_SIZE} />
+              <InitialBadge name={name} size={BADGE_SIZE} photoUrl={photoUrl} />
               <Text variant="chip" numberOfLines={1} style={styles.name}>
                 {name}
               </Text>
@@ -118,7 +123,7 @@ export function ChildSwitcher({
                 }}
                 style={[styles.row, index < options.length - 1 && styles.rowDivided]}
               >
-                <InitialBadge name={option.name} size={BADGE_SIZE} />
+                <InitialBadge name={option.name} size={BADGE_SIZE} photoUrl={option.photoUrl} />
                 <Text variant="chip" numberOfLines={1} style={styles.name}>
                   {option.name}
                 </Text>

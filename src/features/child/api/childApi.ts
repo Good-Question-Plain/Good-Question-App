@@ -78,16 +78,40 @@ export interface UpdateChildInput {
   childId: string;
   name?: string;
   avatarId?: AvatarId;
+  /**
+   * 새로 고른 사진. 만들기와 같은 방식으로 저장소에 먼저 올리고 그 키를 쓴다.
+   * 있으면 `avatarId` 보다 우선한다 — 둘 중 하나만 프로필 그림이 된다.
+   */
+  photo?: { uri: string; contentType: string };
 }
 
-/** `PATCH /users/me/children/{child_id}` */
-export async function updateChild({ childId, name, avatarId }: UpdateChildInput): Promise<Child> {
+/**
+ * `PATCH /users/me/children/{child_id}`
+ *
+ * **아무것도 안 보내면 400 "수정할 항목을 하나 이상 입력해주세요" 다.**
+ * 그래서 바뀐 값만 골라 담는다.
+ */
+export async function updateChild({
+  childId,
+  name,
+  avatarId,
+  photo,
+}: UpdateChildInput): Promise<Child> {
+  // 사진을 골랐으면 먼저 올린다. 여기서 실패하면 수정 자체를 하지 않는다 —
+  // 이름만 바뀌고 넘어가면 사용자는 사진도 바뀐 줄 안다 (만들기와 같은 판단).
+  const profileImageUrl =
+    photo !== undefined
+      ? (await uploadProfileImage({ ...photo, target: 'child' })).objectKey
+      : avatarId === undefined
+        ? undefined
+        : avatarToProfileImage(avatarId);
+
   const dto = await request<ChildDto>({
     method: 'PATCH',
     url: `/users/me/children/${childId}`,
     data: {
       ...(name === undefined ? {} : { name: name.trim() }),
-      ...(avatarId === undefined ? {} : { profile_image_url: avatarToProfileImage(avatarId) }),
+      ...(profileImageUrl === undefined ? {} : { profile_image_url: profileImageUrl }),
     },
   });
   return toChild(dto);

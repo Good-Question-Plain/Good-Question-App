@@ -19,6 +19,7 @@ export default function HomeRoute(): React.JSX.Element {
       // 어색해서 디자인에 없는 임시 호칭을 쓴다 (아이가 읽는 화면이다).
       childName={activeChild?.name ?? '친구'}
       childId={activeChild?.id ?? ''}
+      childPhotoUrl={activeChild?.photoUrl}
       childOptions={children}
       onSelectChild={selectChild}
     />

@@ -40,6 +40,8 @@ export interface ReportScreenProps {
   childName: string;
   childId: string;
   /** 전환 알약을 펼쳤을 때 고를 수 있는 아이들 */
+  /** 지금 보고 있는 아이가 올린 사진. 알약에도 이름 대신 사진이 뜬다. */
+  childPhotoUrl?: string | null;
   childOptions: readonly ChildSwitcherOption[];
   onSelectChild: (id: string) => void;
   /** 어느 이야기의 리포트를 볼지. 라우트가 넘긴다. */
@@ -65,6 +67,7 @@ export interface ReportScreenProps {
  */
 export function ReportScreen({
   childName,
+  childPhotoUrl,
   childId,
   childOptions,
   onSelectChild,
@@ -100,6 +103,7 @@ export function ReportScreen({
       {/* 이 화면만 바탕이 흰색이라 알약은 디자인대로 회색을 쓴다 (뒤집으면 사라진다). */}
       <ChildSwitcher
         name={childName}
+        photoUrl={childPhotoUrl}
         options={childOptions}
         onSelect={onSelectChild}
         tone="surface"

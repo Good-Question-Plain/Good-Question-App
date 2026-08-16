@@ -26,6 +26,8 @@ export interface HomeScreenProps {
   /** 홈 데이터는 아이별이다 (`GET /main?child_id=`). */
   childId: string;
   /** 전환 알약을 펼쳤을 때 고를 수 있는 아이들 */
+  /** 지금 보고 있는 아이가 올린 사진. 알약에도 이름 대신 사진이 뜬다. */
+  childPhotoUrl?: string | null;
   childOptions: readonly ChildSwitcherOption[];
   onSelectChild: (id: string) => void;
 }
@@ -41,6 +43,7 @@ export interface HomeScreenProps {
  */
 export function HomeScreen({
   childName,
+  childPhotoUrl,
   childId,
   childOptions,
   onSelectChild,
@@ -97,7 +100,12 @@ export function HomeScreen({
               오늘은 어떤 이야기를 만나볼까?
             </Text>
           </View>
-          <ChildSwitcher name={childName} options={childOptions} onSelect={onSelectChild} />
+          <ChildSwitcher
+            name={childName}
+            photoUrl={childPhotoUrl}
+            options={childOptions}
+            onSelect={onSelectChild}
+          />
         </Appear>
 
         <View style={[styles.body, { gap: columnGap }]}>

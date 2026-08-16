@@ -22,6 +22,7 @@ export default function ReportRoute(): React.JSX.Element {
     <ReportScreen
       childName={activeChild?.name ?? '아이'}
       childId={activeChild?.id ?? ''}
+      childPhotoUrl={activeChild?.photoUrl}
       childOptions={children}
       onSelectChild={selectChild}
       storyId={story ?? ''}
