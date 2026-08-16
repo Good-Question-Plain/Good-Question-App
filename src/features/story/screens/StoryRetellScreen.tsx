@@ -18,7 +18,7 @@ import {
 
 import { usePostActivity, useStoryProgress, useSubmitRetelling } from '../api/queries';
 import { OrderCard } from '../components/OrderCard';
-import { useRetellDictation } from '../hooks/useRetellDictation';
+import { useDictation } from '../hooks/useDictation';
 import { KEYWORD_SEPARATOR } from '../model/activity';
 
 const ACTIVITY_STEP = 2;
@@ -64,9 +64,9 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
    *
    * `POST .../retell` 은 완성된 **텍스트**를 받는데 서버에 음성을 글로 바꿔주는
    * 엔드포인트가 없어서, 안드로이드 내장 음성인식으로 앱에서 직접 받아쓴다
-   * (`useRetellDictation`). 서버가 음성 파일을 받게 바뀌면 여기만 갈아끼운다.
+   * (`useDictation`). 서버가 음성 파일을 받게 바뀌면 여기만 갈아끼운다.
    */
-  const dictation = useRetellDictation();
+  const dictation = useDictation();
   const transcript = dictation.text;
   /** 마이크를 한 번이라도 눌렀는지. 완료 버튼을 열어주는 조건 중 하나다. */
   const [spoke, setSpoke] = useState(false);

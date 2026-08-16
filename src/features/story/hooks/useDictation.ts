@@ -6,15 +6,17 @@ import {
 import { useCallback, useRef, useState } from 'react';
 
 /**
- * 다시 말하기 받아쓰기 (음성 → 글).
+ * 아이 말 받아쓰기 (음성 → 글). **안드로이드 내장 음성인식을 앱에서 직접 쓴다.**
  *
- * `POST /sessions/{id}/post-activity/retell` 은 완성된 **텍스트**를 받는데
- * 서버에 음성을 글로 바꿔주는 엔드포인트가 없다 (대화의 `speak` 는 장면에
- * 묶여 있어 여기서 못 쓴다). 그래서 **안드로이드 내장 음성인식으로 앱에서 직접**
- * 받아쓴다.
+ * 두 곳에서 쓴다.
  *
- * 서버 `retell` 이 음성 파일을 받게 바뀌면 이 훅을 버리고 `useChildRecorder`
- * 를 쓰면 된다 — 화면에서 갈아끼우는 자리는 `StoryRetellScreen` 한 곳이다.
+ * - **다시 말하기**(`StoryRetellScreen`) — `retell` 이 완성된 **텍스트**를 받는데
+ *   서버에 음성을 글로 바꿔주는 엔드포인트가 없다
+ * - **대화 화면**(`StoryPlayScreen`) — 임시. 서버가 아직 대화 씬을 주지 않아
+ *   `speak` 가 400 이라, 그동안 아이 말을 화면에만이라도 보여준다
+ *
+ * 둘 다 서버가 받아주게 되면 이 훅을 버리고 `useChildRecorder`(음성 파일 업로드)로
+ * 갈아끼우면 된다.
  *
  * ## 왜 이렇게 복잡한가 — 이어 말하기를 직접 만들어야 한다
  *
@@ -55,7 +57,7 @@ const FATAL_ERRORS: ReadonlySet<string> = new Set<ExpoSpeechRecognitionErrorCode
   'audio-capture',
 ]);
 
-export interface RetellDictationResult {
+export interface DictationResult {
   /** 듣는 중인지. 마이크 버튼과 물결 표시가 이 값으로 갈린다. */
   isListening: boolean;
   /** 지금까지 받아쓴 글. 확정된 문장 + 말하는 중인 문장이 이어져 있다. */
@@ -68,15 +70,17 @@ export interface RetellDictationResult {
   failure: 'denied' | 'unavailable' | 'network' | null;
   start: () => Promise<void>;
   stop: () => void;
+  /** 받아쓴 글을 지운다. 장면이 바뀔 때 앞 장면의 말이 남지 않게 한다. */
+  reset: () => void;
 }
 
-export function useRetellDictation(): RetellDictationResult {
+export function useDictation(): DictationResult {
   const [isListening, setIsListening] = useState(false);
   /** 확정된 문장들. 화면이 다시 그려져도 유지돼야 해서 state 로 둔다. */
   const [finals, setFinals] = useState<string[]>([]);
   /** 지금 말하는 중인 문장. 확정되면 `finals` 로 옮겨간다. */
   const [interim, setInterim] = useState('');
-  const [failure, setFailure] = useState<RetellDictationResult['failure']>(null);
+  const [failure, setFailure] = useState<DictationResult['failure']>(null);
 
   /** 아이가 마이크를 켜 둔 상태인지. 끊긴 인식을 다시 켤지 판단하는 기준이다. */
   const wantsListening = useRef(false);
@@ -233,6 +237,13 @@ export function useRetellDictation(): RetellDictationResult {
     beginSegment();
   }, [beginSegment]);
 
+  const reset = useCallback(() => {
+    setFinals([]);
+    setInterim('');
+    interimRef.current = '';
+    setFailure(null);
+  }, []);
+
   const stop = useCallback(() => {
     wantsListening.current = false;
     // `stop` 은 마지막 문장을 확정한 뒤 `end` 를 보낸다 (`abort` 는 버린다).
@@ -241,5 +252,5 @@ export function useRetellDictation(): RetellDictationResult {
 
   const text = [...finals, interim].filter((part) => part.length > 0).join(' ');
 
-  return { isListening, text, failure, start, stop };
+  return { isListening, text, failure, start, stop, reset };
 }

@@ -28,6 +28,7 @@ import { ScenePanel } from '../components/ScenePanel';
 import { SceneWordPicker } from '../components/SceneWordPicker';
 import { CharacterBubble, ChildBubble, ListeningHint } from '../components/SpeechBubble';
 import { useChildRecorder } from '../hooks/useChildRecorder';
+import { useDictation } from '../hooks/useDictation';
 import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
 
 /**
@@ -118,6 +119,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const selectWord = useSelectSceneVocabulary(childId);
   const recorder = useChildRecorder();
   const speech = useNarrationSpeech();
+  const dictation = useDictation();
 
   // 화면에 들어오면 세션을 연다. 같은 이야기를 이미 보던 중이면 이어하기가 된다.
   useEffect(() => {
@@ -212,6 +214,30 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const isNarration = step.kind === 'narration';
   const isLastScene = current >= total;
 
+  /**
+   * 아이가 말할 수 있는 장면인지 (= 마이크를 띄울지).
+   *
+   * 원래는 `kind === 'dialogue'` 하나면 된다. 그런데 **서버가 등장인물이 말을 거는
+   * 장면까지 전부 `narration` 으로 준다**(08-17 확인). 그 장면에 `speak` 를 보내면
+   * 400 "이 장면에서는 말할 수 없습니다" 로 막힌다.
+   *
+   * 시안(161:1158)은 등장인물이 말을 걸면 마이크가 있는 화면이므로, **등장인물이
+   * 있으면 말할 수 있는 장면으로 본다.** 서버가 `kind: dialogue` 를 주기 시작해도
+   * 이 조건은 그대로 참이라 고칠 것이 없다.
+   */
+  const canSpeak = step.characterName !== null;
+
+  /**
+   * 아이 말을 **서버로 보낼 수 있는** 장면인지.
+   *
+   * 여기가 갈리는 자리다. 서버가 받아주면 서버 STT 가 `child_text` 를 주고 등장인물
+   * 대사까지 이어진다(명세 "아이 발화 전송"). 아직 안 받아주므로 그때는 **앱에서
+   * 받아쓰기만 해서 말풍선에 보여준다** — 리포트·단어장에는 안 쌓인다.
+   *
+   * **서버가 대화 씬을 주기 시작하면 이 임시 경로는 저절로 안 쓰인다.**
+   */
+  const serverAcceptsSpeech = !isNarration;
+
   /** 다음 장면으로. 마지막이면 이야기 후 활동으로 넘어간다. */
   const goNextScene = (): void => {
     if (isLastScene) {
@@ -227,6 +253,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
           // 새 장면은 읽어주기부터 시작한다. 마이크는 다 읽은 뒤에야 나타난다.
           setIsReading(true);
           setMicState('ready');
+          // 앞 장면에서 받아쓴 말이 남아 있으면 새 장면의 아이 말풍선으로 보인다.
+          dictation.reset();
           setReply(null);
           setCharacterLine(null);
           setSceneEnded(false);
@@ -260,22 +288,33 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
     goNextScene();
   };
 
-  /** 마이크는 아이 차례일 때 녹음을 시작하고, 녹음 중이면 멈춰서 서버로 보낸다. */
+  /** 마이크는 아이 차례일 때 듣기 시작하고, 듣는 중이면 멈춘다. */
   const handleMicPress = (): void => {
     // 장면이 끝난 뒤에는 서버가 발화를 받지 않는다("이 장면에서는 말할 수 없습니다").
     // 눌러도 400 만 받고 아이에게는 아무 일도 안 일어난 것처럼 보이므로 여기서 막는다.
     if (sceneEnded) return;
 
     if (micState === 'ready') {
-      // 등장인물의 대답을 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 녹음되면 안 된다.
+      // 등장인물의 대답을 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 들어가면 안 된다.
       speech.stop();
       setReply(null);
       setMicState('listening');
-      void recorder.start();
+
+      // 서버가 안 받아주는 장면에서는 앱이 직접 받아쓴다.
+      if (serverAcceptsSpeech) void recorder.start();
+      else void dictation.start();
       return;
     }
 
     if (micState !== 'listening') return;
+
+    if (!serverAcceptsSpeech) {
+      // 받아쓴 글은 `dictation.text` 로 계속 흘러들어와 말풍선에 그려진다.
+      // 마지막 문장이 확정되기까지 잠깐 걸리므로 여기서 복사해두지 않는다.
+      dictation.stop();
+      setMicState('ready');
+      return;
+    }
 
     setMicState('processing');
     void (async () => {
@@ -317,7 +356,17 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   };
 
   // 대화 장면은 서버가 끝났다고 해야 넘어갈 수 있다. 나레이션은 다 읽으면 바로다.
+  // 임시 경로(서버가 안 받아주는 대화 장면)는 나레이션과 같이 취급한다 — 서버가
+  // 끝을 알려주지 않으므로 여기서 막으면 아이가 장면에 갇힌다.
   const canSend = isNarration ? !isReading : sceneEnded;
+
+  /**
+   * 아이 말풍선에 넣을 글.
+   *
+   * 서버가 받아주는 장면이면 서버 STT 결과(`reply`), 아니면 앱이 받아쓴 글이다.
+   */
+  const dictated = dictation.text.trim();
+  const childText = serverAcceptsSpeech ? reply : dictated.length > 0 ? dictated : null;
 
   return (
     <Screen padded={false} maxContentWidth={null}>
@@ -381,7 +430,9 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
                   text={characterLine ?? step.characterOpening ?? ''}
                 />
                 {micState === 'listening' && !isReading && <ListeningHint />}
-                {reply !== null && <ChildBubble text={reply} />}
+                {/* 말하는 대로 글자가 늘어난다 — 아이가 자기 말이 들어가고 있는 걸
+                    봐야 한다. 서버가 받아주는 장면이면 서버 STT 결과(`reply`)다. */}
+                {childText !== null && <ChildBubble text={childText} />}
               </View>
             )}
 
@@ -397,12 +448,10 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
                   **"화면에 뭔가 나타나면 내 차례"** 가 이 화면의 유일한 신호다 —
                   회색 마이크를 계속 띄워두면 언제가 자기 차례인지 알 수가 없다.
 
-                  마이크는 대화 장면에만 있다. 나레이션 장면은 서버가 발화를 받지
-                  않으므로(`speak` 가 400) 보내기만 나온다.
+                  마이크는 **등장인물이 말을 거는 장면**에만 있다(`canSpeak`).
+                  줄거리만 흐르는 장면에는 아이가 대답할 상대가 없어 보내기만 나온다.
                 */}
-                {!isReading && !isNarration && (
-                  <MicControl state={micState} onPress={handleMicPress} />
-                )}
+                {!isReading && canSpeak && <MicControl state={micState} onPress={handleMicPress} />}
 
                 {/* 보내기는 자리를 늘 비워둔다 — 생겼다 사라지면 위의 마이크가 움직인다. */}
                 <View style={styles.sendSlot}>
@@ -420,9 +469,16 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
                 </View>
               </View>
 
-              {recorder.isDenied && (
+              {(recorder.isDenied || dictation.failure === 'denied') && (
                 <Text variant="captionSmall" color="danger" style={styles.micNotice}>
                   마이크를 쓸 수 없어요. 설정에서 허용해주세요.
+                </Text>
+              )}
+              {dictation.failure !== null && dictation.failure !== 'denied' && (
+                <Text variant="captionSmall" color="textMuted" style={styles.micNotice}>
+                  {dictation.failure === 'network'
+                    ? '인터넷이 끊겨서 말을 글로 옮길 수 없어요.'
+                    : '이 기기에서는 말을 글로 옮길 수 없어요.'}
                 </Text>
               )}
             </View>
