@@ -30,6 +30,7 @@ import { CharacterBubble, ChildBubble, ListeningHint } from '../components/Speec
 import { useChildRecorder } from '../hooks/useChildRecorder';
 import { useDictation } from '../hooks/useDictation';
 import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
+import { useLastStoryStore } from '../model/lastStoryStore';
 
 /**
  * 읽어주기가 **시작조차 못 했는지** 판단하는 시간.
@@ -121,9 +122,14 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const speech = useNarrationSpeech();
   const dictation = useDictation();
 
+  const rememberStory = useLastStoryStore((state) => state.rememberStory);
+
   // 화면에 들어오면 세션을 연다. 같은 이야기를 이미 보던 중이면 이어하기가 된다.
   useEffect(() => {
     if (childId.length === 0 || storyId.length === 0) return;
+
+    // 리포트가 "어느 이야기인지" 를 여기서만 알 수 있다 (`lastStoryStore` 주석 참고).
+    rememberStory(storyId);
 
     start.mutate(storyId, {
       onSuccess: (session) => setStep(session.step),

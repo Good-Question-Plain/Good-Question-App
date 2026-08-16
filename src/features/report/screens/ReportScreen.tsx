@@ -122,6 +122,17 @@ export function ReportScreen({
    * "없음 → 만드는 중 → 완료" 를 보호자에게 알려줄 자리가 필요하다.
    */
   function renderPlaceholder(): React.JSX.Element {
+    // 어느 이야기인지 정해지지 않았다. **"리포트가 없다"고 하면 안 된다** —
+    // 방금 이야기를 끝낸 보호자가 그 문구를 보면 기록이 사라진 줄 안다.
+    if (storyId.length === 0) {
+      return (
+        <ReportPlaceholder
+          title="어느 이야기의 리포트를 볼지 정해주세요"
+          description="이야기를 한 편 열어보면 그 이야기의 리포트를 볼 수 있어요"
+        />
+      );
+    }
+
     // 아직 안 만든 리포트다(404). 에러가 아니라 정상 경로라 만들기를 권한다.
     if (isError && isReportMissing(error)) {
       return (
