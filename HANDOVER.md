@@ -694,6 +694,14 @@ rm -rf node_modules/expo-constants/android/build
 1. 세션 없음 + 보호 화면 → 로그인으로 되돌린다 (항상)
 2. 세션 있음 + 로그인 화면 → 건너뛴다 (**앱을 켠 직후 한 번만**)
 
+**⚠️ 세션 확인에 타임아웃이 있다 (2026-08-16 추가).** 없으면 **앱 전체가 흰
+화면으로 굳는다.** `getSession()` 은 저장된 토큰이 만료됐으면 네트워크로 갱신을
+시도하는데, 서버가 느리거나 답이 없으면 영원히 안 끝나고 그동안 `AuthGate` 는
+아무것도 그리지 않는다. **실제로 기기에서 재현했다** — 하루 지난 세션 + 서버
+다운 조합이었다. 3초 뒤에는 "로그인 안 됨"으로 보고 진행하고, 뒤늦게 세션이
+도착하면 `onAuthStateChange` 가 받아서 화면을 고친다.
+(`Appear` 가 애니메이션에 타이머 안전장치를 두는 것과 같은 이유다.)
+
 **2번을 한 번만 하는 게 핵심이다.** 매번 걸면 로그인 도중 세션이 잠깐 생겼다
 사라지는 경우(`ensureServerProfile` 이 토큰 거부로 `signOut` 하는 경우)에 화면이
 튀었다 돌아오면서 **에러 문구가 사라진다.** 그래서 로그인 성공 뒤 이동은
@@ -1029,6 +1037,26 @@ HANDOVER 우선순위상 다음이었지만 남겨뒀다. 확인 못 한 게 셋
 
 크기변경 1건은 `212:261`(대화 화면의 "다시 듣기" 줄) 120 → 123 인데, 코드가 이
 높이를 잡고 있지 않아(오토레이아웃) 반영할 게 없다.
+
+### 실기기 확인이 중간에 끊겼다 (2026-08-16)
+
+`expo-audio` 를 넣은 APK 까지는 빌드·설치가 됐고 앱도 떴다. 그 상태에서 위의
+**흰 화면 결함을 발견해 고쳤는데, 고친 뒤 화면을 확인하기 전에 태블릿이 다시
+`unauthorized` 로 돌아갔다**(USB 디버깅 허용이 풀렸다).
+
+**다음에 할 일**: 기기에서 USB 디버깅을 다시 허용하고 아래를 확인한다.
+
+```bash
+adb devices                                    # device 로 잡히는지
+npx expo start --dev-client --clear
+adb reverse tcp:8081 tcp:8081
+adb shell am force-stop com.goodquestion.app
+adb shell am start -a android.intent.action.VIEW \
+  -d "exp+good-question-app://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+```
+
+**APK 재빌드는 필요 없다** — 마지막 빌드에 `expo-audio` 가 들어 있고, 그 뒤
+바뀐 건 JS 뿐이다.
 
 ### 아직 확인 안 된 것
 
