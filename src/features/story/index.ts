@@ -38,6 +38,6 @@ export { StoryActivityScreen, type StoryActivityScreenProps } from './screens/St
 export { StoryDoneScreen, type StoryDoneScreenProps } from './screens/StoryDoneScreen';
 export { StoryPlayScreen, type StoryPlayScreenProps } from './screens/StoryPlayScreen';
 export { StoryRetellScreen, type StoryRetellScreenProps } from './screens/StoryRetellScreen';
-export { findStory, MOCK_PROGRESS, MOCK_STORIES, STORY_CATEGORIES } from './model/types';
-export type { Story, StoryCategory, StoryProgress } from './model/types';
+export { STORY_CATEGORIES } from './model/types';
+export type { Story, StoryCategory } from './model/types';
 export type { StoryCard } from './model/activity';

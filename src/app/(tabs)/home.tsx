@@ -18,6 +18,7 @@ export default function HomeRoute(): React.JSX.Element {
       // 목록을 받아오는 동안에도 화면은 그려진다. 이름 자리가 빈 채로 보이면
       // 어색해서 디자인에 없는 임시 호칭을 쓴다 (아이가 읽는 화면이다).
       childName={activeChild?.name ?? '친구'}
+      childId={activeChild?.id ?? ''}
       childOptions={children}
       onSelectChild={selectChild}
     />

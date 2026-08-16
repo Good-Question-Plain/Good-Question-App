@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 
 import { colors, hitSlopFor, radius, spacing, storyTints } from '@/shared/theme';
 import {
@@ -13,7 +13,7 @@ import {
   Text,
 } from '@/shared/ui';
 
-import { findStory, MOCK_STORIES } from '../model/types';
+import { useStories } from '../api/queries';
 
 /**
  * 이야기 상세 (Figma 125:236).
@@ -24,7 +24,28 @@ import { findStory, MOCK_STORIES } from '../model/types';
 export function StoryDetailScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const story = findStory(id);
+  const { data, isLoading } = useStories('전체');
+  const summaryFromList = data?.find((item) => item.id === id);
+  const tintIndex = data?.findIndex((item) => item.id === id) ?? 0;
+
+  /**
+   * 상세는 목록이 주는 값만으로 만든다.
+   *
+   * **`GET /stories/{id}` 가 명세에 없다.** 줄거리·역할 안내·등장인물을 받아올
+   * 데가 없어서, 그 블록들은 값이 없으면 화면에서 빠진다(아래 조건부 렌더).
+   * 상세 엔드포인트가 생기면 여기만 그 응답으로 바꾸면 된다.
+   */
+  const story =
+    summaryFromList === undefined
+      ? undefined
+      : {
+          id: summaryFromList.id,
+          title: summaryFromList.title,
+          minutes: summaryFromList.minutes,
+          tag: summaryFromList.topics[0] ?? '이야기',
+          tags: summaryFromList.topics,
+          thumbnailUrl: summaryFromList.thumbnailUrl ?? undefined,
+        };
 
   const backButton = (
     <Appear>
@@ -50,16 +71,15 @@ export function StoryDetailScreen(): React.JSX.Element {
         <View style={styles.page}>
           {backButton}
           <EmptyState
-            title="이야기를 찾을 수 없어요"
-            description="사라졌거나 주소가 바뀐 이야기예요"
+            title={isLoading ? '이야기를 불러오는 중이에요' : '이야기를 찾을 수 없어요'}
+            description={isLoading ? undefined : '사라졌거나 주소가 바뀐 이야기예요'}
           />
         </View>
       </Screen>
     );
   }
 
-  const { title, minutes, tag, Icon, tags, summary, roleGuide, characters } = story;
-  const tintIndex = MOCK_STORIES.findIndex((item) => item.id === story.id);
+  const { title, minutes, tag, thumbnailUrl, tags } = story;
 
   return (
     <Screen>
@@ -75,7 +95,14 @@ export function StoryDetailScreen(): React.JSX.Element {
                   { backgroundColor: storyTints[tintIndex % storyTints.length] },
                 ]}
               >
-                <Icon width={220} height={220} />
+                {thumbnailUrl !== undefined && (
+                  <Image
+                    source={{ uri: thumbnailUrl }}
+                    style={styles.thumbnailImage}
+                    resizeMode="cover"
+                    accessibilityIgnoresInvertColors
+                  />
+                )}
               </View>
             </Appear>
 
@@ -88,26 +115,14 @@ export function StoryDetailScreen(): React.JSX.Element {
 
               <Text variant="word">{title}</Text>
 
-              {summary !== undefined && (
-                <Text variant="body" color="textStrong" style={styles.summary}>
-                  {summary}
-                </Text>
-              )}
-
-              {roleGuide !== undefined && (
-                <View style={styles.roleCard}>
-                  <Text variant="captionStrong" color="primaryText">
-                    너는 이 이야기에서...
-                  </Text>
-                  <Text variant="body">{roleGuide}</Text>
-                </View>
-              )}
-
+              {/*
+                디자인에는 줄거리·역할 안내·등장 인물 블록이 더 있다.
+                **`GET /stories/{id}` 상세가 명세에 없어서 채울 값이 없다.**
+                빈 카드를 남기면 로딩이 안 끝난 것처럼 보이므로 통째로 뺐다.
+                상세 엔드포인트가 생기면 이 자리에 되살린다.
+              */}
               <View style={styles.meta}>
                 <MetaRow label="예상 시간" value={`약 ${minutes}분`} />
-                {characters !== undefined && (
-                  <MetaRow label="등장 인물" value={characters.join(', ')} />
-                )}
               </View>
 
               <Button
@@ -166,6 +181,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16, // 디자인 실측
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   info: {
     flex: 428,

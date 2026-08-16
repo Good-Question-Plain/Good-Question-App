@@ -1,13 +1,6 @@
 import type { FC } from 'react';
 import type { SvgProps } from 'react-native-svg';
 
-import BearSleep from '@assets/stories/bear-sleep.svg';
-import Cinderella from '@assets/stories/cinderella.svg';
-import Oz from '@assets/stories/oz.svg';
-import PeterPan from '@assets/stories/peterpan.svg';
-import Pigs from '@assets/stories/pigs.svg';
-import Raccoon from '@assets/stories/raccoon.svg';
-
 /** 카테고리 칩. 디자인(125:115)의 순서를 따른다. */
 export const STORY_CATEGORIES = ['전체', '우정', '용기', '감정', '상상', '모험'] as const;
 export type StoryCategory = (typeof STORY_CATEGORIES)[number];
@@ -19,7 +12,9 @@ export interface Story {
   minutes: number;
   /** 카드에 붙는 태그. 카테고리 필터와는 별개 값일 수 있어 문자열로 둔다. */
   tag: string;
-  Icon: FC<SvgProps>;
+  /** 서버가 주는 표지 그림. 없으면 번들 아이콘으로 떨어진다. */
+  thumbnailUrl?: string;
+  Icon?: FC<SvgProps>;
 
   // --- 상세 화면에서만 쓰는 값들 ---
   /** 상세 화면 상단의 태그 묶음. 목록의 `tag` 를 포함한다. */
@@ -37,47 +32,3 @@ export interface StoryProgress {
   /** 진행률 0~1 */
   ratio: number;
 }
-
-export function findStory(id: string): Story | undefined {
-  return MOCK_STORIES.find((story) => story.id === id);
-}
-
-/**
- * 화면 확인용 임시 데이터. 제목·시간·태그 모두 디자인에 적힌 값 그대로다.
- *
- * **이야기만 아직 목데이터로 남아 있다** (자녀·단어장은 서버에 붙었다).
- * API 계층(`api/storyApi.ts`)은 만들어 뒀지만 화면을 못 바꾼 이유가 셋이다.
- *
- * 1. **`GET /stories/{id}` 상세가 명세에 없다.** 목록은 제목·시간·주제·표지뿐이라
- *    상세 화면의 줄거리·역할 안내·등장인물을 채울 데가 없다.
- * 2. **표지 그림의 출처가 다르다.** 지금은 Figma 에서 내보낸 번들 SVG 인데
- *    서버는 `thumbnail_url` 을 준다. 바꾸면 서버에 그림이 없을 때 카드가
- *    빈 칸이 된다 — 확인할 계정이 없어 지금은 확인할 방법도 없다.
- * 3. **id 체계가 다르다.** 여기는 '1'~'6' 이고 서버는 UUID 다. 목록만 서버로
- *    바꾸면 상세·대본·활동 목데이터가 전부 매칭에 실패한다.
- *
- * 1번이 풀리면 한꺼번에 바꾸는 게 맞다. 그때 이 상수는 지운다.
- */
-export const MOCK_STORIES: readonly Story[] = [
-  { id: '1', title: '너구리의 도토리', minutes: 14, tag: '자연', Icon: Raccoon },
-  { id: '2', title: '곰의 겨울잠', minutes: 12, tag: '자연', Icon: BearSleep },
-  {
-    id: '3',
-    title: '아기돼지 삼형제',
-    minutes: 15,
-    tag: '우정',
-    Icon: Pigs,
-    tags: ['우정', '협력'],
-    summary:
-      '세 마리의 형제 돼지가 각자 다른 방식으로 집을 짓고, 늑대를 만나 함께 지혜롭게 문제를 해결해가는 이야기입니다.',
-    roleGuide:
-      '가장 막내 돼지가 되어 형제들을 보호하고, 늑대와의 만남에서 어떻게 대처할지 결정해보세요!',
-    characters: ['첫째 돼지', '둘째 돼지', '셋째 돼지', '늑대'],
-  },
-  { id: '4', title: '신데렐라', minutes: 18, tag: '상상', Icon: Cinderella },
-  { id: '5', title: '피터팬', minutes: 20, tag: '모험', Icon: PeterPan },
-  { id: '6', title: '오즈의 마법사', minutes: 22, tag: '상상', Icon: Oz },
-] as const;
-
-/** 홈의 "이어하기" 자리에 쓰는 임시 진행 상태. 디자인(78:184)의 값 그대로다. */
-export const MOCK_PROGRESS: StoryProgress = { storyId: '1', ratio: 0.45 };

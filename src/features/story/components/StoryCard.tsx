@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, storyTints } from '@/shared/theme';
 import { Chip, PressableScale, Text } from '@/shared/ui';
@@ -20,7 +20,7 @@ export function StoryCard({
   onPress,
   style,
 }: StoryCardProps): React.JSX.Element {
-  const { title, minutes, tag, Icon } = story;
+  const { title, minutes, tag, Icon, thumbnailUrl } = story;
   const tint = storyTints[tintIndex % storyTints.length];
 
   return (
@@ -33,7 +33,17 @@ export function StoryCard({
       style={[styles.card, style]}
     >
       <View style={[styles.thumbnail, { backgroundColor: tint }]}>
-        <Icon width={THUMBNAIL_ICON_SIZE} height={THUMBNAIL_ICON_SIZE} />
+        {/* 서버 표지가 있으면 그걸, 없으면 번들 그림. 둘 다 없으면 색면만 남는다. */}
+        {thumbnailUrl !== undefined ? (
+          <Image
+            source={{ uri: thumbnailUrl }}
+            style={styles.thumbnailImage}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          Icon !== undefined && <Icon width={THUMBNAIL_ICON_SIZE} height={THUMBNAIL_ICON_SIZE} />
+        )}
       </View>
 
       <View style={styles.body}>
@@ -64,6 +74,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // 썸네일 그림은 칸을 꽉 채운다. 디자인도 그림이 잘리는 걸 감수한 크기다.
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   body: {
     gap: spacing.xs,
