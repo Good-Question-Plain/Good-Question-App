@@ -22,6 +22,13 @@ export { default as HeartDetailIcon } from '@assets/icons/heart-detail.svg';
 export { default as PencilIcon } from '@assets/icons/pencil.svg';
 export { default as ChevronRightIcon } from '@assets/icons/chevron-right.svg';
 export { default as ChevronDownIcon } from '@assets/icons/chevron-down.svg';
+// 씬 단어 고르기(417:616)의 체크박스. 원본은 아이콘 라이브러리 인스턴스
+// (carbon:checkbox / mdi:checkbox-outline)라 각각 export 해 두 상태로 쓴다.
+// 모달 닫기 X (86:739). 시안은 획 두 개로 나뉘어 있어 한 파일로 합쳤다 —
+// path 값은 내보낸 그대로다.
+export { default as CloseIcon } from '@assets/icons/close.svg';
+export { default as CheckboxIcon } from '@assets/icons/checkbox.svg';
+export { default as CheckboxCheckedIcon } from '@assets/icons/checkbox-checked.svg';
 export { default as ReportIcon } from '@assets/icons/report.svg';
 export { default as SettingsIcon } from '@assets/icons/settings.svg';
 export { default as HelpIcon } from '@assets/icons/help.svg';
