@@ -1,18 +1,9 @@
-import { useLocalSearchParams } from 'expo-router';
+import { StoryDoneScreen } from '@/features/story';
 
-import { useActiveChild } from '@/features/child';
-import { StoryDoneScreen, useStories } from '@/features/story';
-
-/** 활동 완료 라우트. 제목은 세션 응답에 없어서 목록(캐시)에서 찾아 넘긴다. */
-export default function StoryDoneRoute(): React.JSX.Element {
-  const { activeChild } = useActiveChild();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: stories } = useStories('전체');
-
-  return (
-    <StoryDoneScreen
-      childId={activeChild?.id ?? ''}
-      storyTitle={stories?.find((story) => story.id === id)?.title}
-    />
-  );
-}
+/**
+ * 활동 완료 라우트.
+ *
+ * 보여줄 값(제목·발화 횟수·단어 수)은 앞 화면이 `retell` 응답을 그대로
+ * 파라미터로 넘겨준다. 그래서 이 라우트는 조립할 게 없다.
+ */
+export default StoryDoneScreen;

@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { colors, hitSlopFor, radius, spacing } from '@/shared/theme';
@@ -85,8 +86,14 @@ export function WordDetailScreen({ childId }: WordDetailScreenProps): React.JSX.
                 scaleTo={0.88}
                 hitSlop={hitSlopFor(ROUND_BUTTON_SIZE)}
                 style={[styles.roundButton, styles.speakerButton]}
+                /**
+                 * 단어를 소리 내어 읽어준다. **TTS 는 앱이 맡는다.**
+                 * 서버가 `audio_url` 을 줄 때는 그 녹음을 재생하는 게 맞지만,
+                 * 지금은 값이 비어 오므로 기기 음성으로 읽는다.
+                 */
                 onPress={() => {
-                  // TODO: TTS 재생 연결
+                  Speech.stop();
+                  Speech.speak(entry.word, { language: 'ko-KR', rate: 0.9 });
                 }}
               >
                 <SpeakerIcon width={18} height={18} color={colors.textInverse} />

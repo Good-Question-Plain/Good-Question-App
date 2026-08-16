@@ -105,7 +105,18 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
     if (submit.isPending) return;
 
     submit.mutate(transcript, {
-      onSuccess: () => router.replace({ pathname: '/story/[id]/done', params: { id: storyId } }),
+      // 완료 화면이 보여줄 값(제목·발화 횟수·단어 수)을 서버가 여기서 준다.
+      // 다시 받아올 엔드포인트가 없으므로 그대로 다음 화면에 넘긴다.
+      onSuccess: (result) =>
+        router.replace({
+          pathname: '/story/[id]/done',
+          params: {
+            id: storyId,
+            title: result.storyTitle,
+            turns: String(result.utteranceCount),
+            words: String(result.newVocabularyCount),
+          },
+        }),
     });
   };
 

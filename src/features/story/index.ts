@@ -35,7 +35,7 @@ export { HomeScreen, type HomeScreenProps } from './screens/HomeScreen';
 export { StoryDetailScreen } from './screens/StoryDetailScreen';
 export { StoryListScreen } from './screens/StoryListScreen';
 export { StoryActivityScreen, type StoryActivityScreenProps } from './screens/StoryActivityScreen';
-export { StoryDoneScreen, type StoryDoneScreenProps } from './screens/StoryDoneScreen';
+export { StoryDoneScreen } from './screens/StoryDoneScreen';
 export { StoryPlayScreen, type StoryPlayScreenProps } from './screens/StoryPlayScreen';
 export { StoryRetellScreen, type StoryRetellScreenProps } from './screens/StoryRetellScreen';
 export { STORY_CATEGORIES } from './model/types';

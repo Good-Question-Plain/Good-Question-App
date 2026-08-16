@@ -28,14 +28,15 @@ import { ScenePanel } from '../components/ScenePanel';
 import { SceneWordPicker } from '../components/SceneWordPicker';
 import { CharacterBubble, ChildBubble, ListeningHint } from '../components/SpeechBubble';
 import { useChildRecorder } from '../hooks/useChildRecorder';
+import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
 
 /**
- * 나레이션을 읽어주는 데 걸린다고 가정하는 시간.
+ * 읽어주기가 실패했을 때를 위한 최소 대기 시간.
  *
- * TODO: TTS 가 붙으면 이 타이머 대신 재생 완료 콜백으로 바꾼다. 서버는 아직
- * 음성을 내려주지 않아서 글을 읽을 시간만 확보한다.
+ * 기기에 한국어 음성이 없으면 `onDone` 이 안 올 수 있다. 그때도 아이 차례는
+ * 와야 하므로 안전장치로 둔다 (`Appear` 의 타이머와 같은 이유).
  */
-const NARRATION_MS = 2500;
+const NARRATION_FALLBACK_MS = 2500;
 
 /**
  * 배경 그림 위에 글을 얹으려면 그림을 죽여야 한다. 디자인 실측(40%).
@@ -84,6 +85,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const speak = useSpeak(childId);
   const selectWord = useSelectSceneVocabulary(childId);
   const recorder = useChildRecorder();
+  const speech = useNarrationSpeech();
 
   // 화면에 들어오면 세션을 연다. 같은 이야기를 이미 보던 중이면 이어하기가 된다.
   useEffect(() => {
@@ -105,14 +107,26 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId, storyId]);
 
-  // 나레이션은 읽을 시간을 준 뒤 아이 차례로 넘어간다.
+  /**
+   * 장면이 바뀌면 나레이션을 읽어주고, 다 읽으면 아이 차례로 넘긴다.
+   *
+   * **TTS 는 앱이 맡는다** — 서버는 글만 준다. 읽어주기가 안 되는 기기에서도
+   * 아이 차례는 와야 하므로 타이머를 안전장치로 함께 건다.
+   */
   useEffect(() => {
     if (step === null || micState !== 'blocked') return;
-    if (step.kind !== 'narration' && step.characterOpening === null) return;
 
-    const timer = setTimeout(() => setMicState('ready'), NARRATION_MS);
+    // 대화 장면이면 등장인물의 첫 대사를, 아니면 줄거리를 읽는다.
+    const line = step.kind === 'narration' ? step.sceneDescription : (step.characterOpening ?? '');
+
+    // 다 읽으면 아이 차례. 읽어주기가 안 되는 기기에서는 아래 타이머가 대신 넘긴다.
+    speech.speak(line, () => setMicState('ready'));
+
+    const timer = setTimeout(() => setMicState('ready'), NARRATION_FALLBACK_MS);
 
     return () => clearTimeout(timer);
+    // speech 는 매 렌더 같은 참조라 의존성에 넣으면 무한 재생된다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, micState]);
 
   const backButton = (
@@ -197,6 +211,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   /** 마이크는 아이 차례일 때 녹음을 시작하고, 녹음 중이면 멈춰서 서버로 보낸다. */
   const handleMicPress = (): void => {
     if (micState === 'ready') {
+      // 아직 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 녹음되면 안 된다.
+      speech.stop();
       setReply(null);
       setMicState('listening');
       void recorder.start();
@@ -219,6 +235,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
           onSuccess: (result) => {
             setReply(result.childText.length > 0 ? result.childText : null);
             setCharacterLine(result.characterLine);
+            // 등장인물의 대답도 읽어준다. 아이가 글을 못 읽어도 대화가 이어진다.
+            if (result.characterLine !== null) speech.speak(result.characterLine);
             setSceneEnded(result.sceneEnded);
             // 미션은 대화가 진행돼야 나온다. 응답에 붙어 오면 패널이 생긴다.
             setStep((prev) =>
@@ -270,9 +288,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
             <NarrationPanel
               badge={step.mission === null ? '이야기 줄거리' : '이야기 상황'}
               text={step.sceneDescription}
-              onReplay={() => {
-                // TODO: TTS 재생 (서버가 아직 음성을 내려주지 않는다)
-              }}
+              onReplay={() => speech.speak(step.sceneDescription)}
             />
 
             <SceneWordPicker

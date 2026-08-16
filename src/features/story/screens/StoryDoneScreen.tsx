@@ -4,14 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { colors, radius, spacing } from '@/shared/theme';
 import { Appear, Button, EmptyState, GuideFaceIcon, Screen, SparkleIcon, Text } from '@/shared/ui';
 
-import { usePostActivity, useStoryProgress } from '../api/queries';
-
-export interface StoryDoneScreenProps {
-  /** 활동은 아이별 세션에 매달려 있다. 라우트가 넘긴다. */
-  childId: string;
-  /** 이야기 제목. 세션 응답에는 없어서 목록에서 찾아 넘긴다. */
-  storyTitle?: string;
-}
+/**
+ * 완료 화면이 보여줄 값은 **앞 화면(다시 말하기)의 `retell` 응답**이 준다.
+ * 다시 받아올 엔드포인트가 없어서 라우트 파라미터로 넘겨받는다.
+ */
 
 /**
  * 이야기 후 활동 완료 (Figma 92:1340).
@@ -19,17 +15,17 @@ export interface StoryDoneScreenProps {
  * 아이가 오늘 한 걸 숫자로 보여주고 다음 갈 곳을 둘로만 준다.
  * 축하 화면이라 뒤로가기를 두지 않는다 — 여기서 흐름이 끝난다.
  */
-export function StoryDoneScreen({ childId, storyTitle }: StoryDoneScreenProps): React.JSX.Element {
+export function StoryDoneScreen(): React.JSX.Element {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const storyId = id ?? '';
+  const { title, turns, words } = useLocalSearchParams<{
+    title?: string;
+    turns?: string;
+    words?: string;
+  }>();
 
-  const { data: progress } = useStoryProgress(childId, storyId);
-  const { data: activity } = usePostActivity(progress?.sessionId ?? '');
-
-  // 활동 기록이 없는 이야기로 곧장 들어온 경우(오래된 링크, 딥링크). 0번·0개짜리
+  // 활동을 거치지 않고 곧장 들어온 경우(오래된 링크, 딥링크). 0번·0개짜리
   // 축하 화면을 띄우면 하지도 않은 걸 했다고 알리는 셈이라, 그대로 사실을 알린다.
-  if (progress === undefined || activity === undefined) {
+  if (turns === undefined || words === undefined) {
     return (
       <Screen>
         <View style={styles.page}>
@@ -45,11 +41,8 @@ export function StoryDoneScreen({ childId, storyTitle }: StoryDoneScreenProps): 
     );
   }
 
-  // 리텔링 응답이 주는 수치가 원래 여기 들어갈 값인데, 그 응답은 앞 화면에서
-  // 한 번 쓰고 사라진다. 다시 받아올 엔드포인트가 없어 세션 정보로 대신한다.
-  // **서버가 이 두 값을 다시 줄 수 있으면 그걸 쓰는 게 맞다.**
-  const turnCount = progress.sceneCount;
-  const wordCount = activity.cards.length;
+  const turnCount = Number(turns);
+  const wordCount = Number(words);
 
   return (
     <Screen>
@@ -68,7 +61,7 @@ export function StoryDoneScreen({ childId, storyTitle }: StoryDoneScreenProps): 
         </Appear>
 
         <Appear delay={140} style={styles.summary}>
-          <Text variant="heading">{storyTitle ?? '오늘의 이야기'}</Text>
+          <Text variant="heading">{title ?? '오늘의 이야기'}</Text>
           <View style={styles.rows}>
             <SummaryRow label="발화 횟수" value={`${turnCount}번`} />
             <SummaryRow label="새로 배운 단어" value={`${wordCount}개`} />

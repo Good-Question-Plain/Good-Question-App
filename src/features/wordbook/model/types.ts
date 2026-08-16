@@ -4,9 +4,11 @@ export interface WordEntry {
   /** 저장된 단어 */
   word: string;
   storyId: string;
-  /** 어느 이야기에서 나온 단어인지 */
+  /** 어느 이야기에서 나온 단어인지. 서버가 안 주면 빈 문자열이다. */
   storyTitle: string;
   saved: boolean;
+  /** `used` = 이야기에서 쓴 말, `curious` = 뜻을 물어본 말. 안 줄 수도 있다. */
+  kind?: 'used' | 'curious';
 }
 
 /**
