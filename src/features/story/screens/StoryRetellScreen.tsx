@@ -18,7 +18,8 @@ import {
 
 import { usePostActivity, useStoryProgress, useSubmitRetelling } from '../api/queries';
 import { OrderCard } from '../components/OrderCard';
-import { useChildRecorder } from '../hooks/useChildRecorder';
+import { useRetellDictation } from '../hooks/useRetellDictation';
+import { KEYWORD_SEPARATOR } from '../model/activity';
 
 const ACTIVITY_STEP = 2;
 
@@ -36,27 +37,45 @@ const ACTIVITY_TOTAL = 2;
  */
 export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JSX.Element {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, keywords } = useLocalSearchParams<{ id: string; keywords?: string }>();
   const storyId = id ?? '';
+
+  /**
+   * 핵심 단어 (디자인 92:1290 의 "핵심 단어" 칩).
+   *
+   * 순서 맞추기에서 정답을 맞힐 때 서버가 주는 값이고(`submit` 응답의
+   * `vocabulary`), 앞 화면이 라우트 파라미터로 넘겨준다. 다시 받아올
+   * 엔드포인트가 없어서 이 화면에서 조회할 수 없다.
+   * 구분자는 보내는 쪽과 같은 `KEYWORD_SEPARATOR` 를 쓴다 (거기 이유를 적어뒀다).
+   */
+  const keyWords =
+    keywords === undefined || keywords === '' ? [] : keywords.split(KEYWORD_SEPARATOR);
 
   const { data: progress } = useStoryProgress(childId, storyId);
   const sessionId = progress?.sessionId ?? '';
   const { data: activity } = usePostActivity(sessionId);
   const submit = useSubmitRetelling(sessionId);
-  const recorder = useChildRecorder();
+  /**
+   * 받아쓰기.
+   *
+   * `POST .../retell` 은 완성된 **텍스트**를 받는데 서버에 음성을 글로 바꿔주는
+   * 엔드포인트가 없어서, 안드로이드 내장 음성인식으로 앱에서 직접 받아쓴다
+   * (`useRetellDictation`). 서버가 음성 파일을 받게 바뀌면 여기만 갈아끼운다.
+   */
+  const dictation = useRetellDictation();
+  const transcript = dictation.text;
+  /** 마이크를 한 번이라도 눌렀는지. 완료 버튼을 열어주는 조건 중 하나다. */
+  const [spoke, setSpoke] = useState(false);
+  const recording = dictation.isListening;
 
   /**
-   * 받아쓴 글.
+   * 완료 버튼을 열어줄지.
    *
-   * **아직 채울 방법이 없다.** `POST .../retell` 은 완성된 텍스트를 받는데,
-   * 아이 음성을 글로 바꿔줄 엔드포인트가 명세에 없다 (대화의 `speak` 는 장면에
-   * 묶여 있어 여기서 못 쓴다). 녹음은 해두고, STT 가 생기면 그 결과를 여기에
-   * 넣으면 화면 나머지는 그대로 동작한다. **백엔드 확인 대상.**
+   * **받아쓰기가 안 되는 상황에서도 열어준다.** 인식기가 없거나 권한이 거부된
+   * 기기에서 글이 안 쌓인다고 버튼을 막으면 아이가 활동에서 못 빠져나온다.
+   * 그때는 빈 텍스트가 서버로 가는데, 이야기를 끝낸 사실 자체는 남는 게 낫다.
    */
-  const [transcript] = useState('');
-  /** 한 번이라도 말했는지. 완료 버튼을 열어주는 조건이다. */
-  const [spoke, setSpoke] = useState(false);
-  const recording = recorder.isRecording;
+  const canFinish = transcript.trim().length > 0 || (spoke && dictation.failure !== null);
 
   const backButton = (
     <PressableScale
@@ -85,20 +104,14 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
     );
   }
 
-  /**
-   * 마이크.
-   *
-   * **받아쓴 글이 아직 화면에 안 나온다.** `POST .../retell` 은 완성된 텍스트를
-   * 받는데, 아이 음성을 글로 바꿔줄 엔드포인트가 명세에 없다
-   * (대화의 `speak` 는 장면에 묶여 있어 여기서 못 쓴다).
-   * 녹음은 해두고, 서버에 STT 가 생기면 그 결과를 `transcript` 에 넣으면 된다.
-   */
   const handleMicPress = (): void => {
+    setSpoke(true);
+
     if (recording) {
-      void recorder.stop().then(() => setSpoke(true));
+      dictation.stop();
       return;
     }
-    void recorder.start();
+    void dictation.start();
   };
 
   const handleDone = (): void => {
@@ -134,7 +147,7 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
               label="완료"
               // 디자인은 h38 인데 아이가 누르는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
               size="lg"
-              disabled={!spoke}
+              disabled={!canFinish}
               loading={submit.isPending}
               onPress={handleDone}
             />
@@ -149,7 +162,12 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
           </View>
 
           <View style={styles.transcript}>
-            {transcript === '' ? (
+            {dictation.failure !== null && transcript === '' ? (
+              // 받아쓰기가 안 되는 기기·상황. 활동은 계속할 수 있다고 알려준다.
+              <Text variant="bodyMedium" color="textMuted">
+                {DICTATION_FAILURE_TEXT[dictation.failure]}
+              </Text>
+            ) : transcript === '' ? (
               <Text variant="bodyMedium" color="textMuted">
                 마이크를 누르고 이야기를 들려줘!
               </Text>
@@ -207,13 +225,9 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
             <View style={styles.keywordColumn}>
               <Text variant="captionStrong">핵심 단어</Text>
               <View style={styles.keywordRow}>
-                {/* 핵심 단어는 정답을 맞힐 때 서버가 준다. 여기서는 카드 제목을
-                    대신 늘어놓는다 — 활동 화면에서 방금 본 것과 같은 말들이다. */}
-                {activity.cards
-                  .map((card) => card.title)
-                  .map((keyword) => (
-                    <Chip key={keyword} label={keyword} size="lg" style={styles.keyword} />
-                  ))}
+                {keyWords.map((keyword) => (
+                  <Chip key={keyword} label={keyword} size="lg" style={styles.keyword} />
+                ))}
               </View>
             </View>
           </View>
@@ -225,6 +239,18 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
 
 /** 녹음 중임을 알리는 막대. 높이는 디자인 실측. */
 const WAVE_HEIGHTS = [11.34, 18.84, 23.7, 22.72];
+
+/**
+ * 받아쓰기가 안 될 때의 안내.
+ *
+ * 아이가 읽는 문장이라 원인을 설명하지 않고 **다음에 뭘 하면 되는지**만 적는다
+ * (디자인에 없는 상태라 문구는 임시다 — 시안이 나오면 교체 대상).
+ */
+const DICTATION_FAILURE_TEXT: Record<'denied' | 'unavailable' | 'network', string> = {
+  denied: '마이크를 쓸 수 없어요. 그래도 소리 내어 말하고 완료를 눌러도 괜찮아!',
+  unavailable: '이 기기에서는 글로 옮길 수 없어요. 소리 내어 말하고 완료를 눌러줘!',
+  network: '인터넷이 끊겨서 글로 옮길 수 없어요. 소리 내어 말하고 완료를 눌러줘!',
+};
 
 const styles = StyleSheet.create({
   page: {
