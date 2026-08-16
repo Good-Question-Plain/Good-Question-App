@@ -28,16 +28,66 @@ export function setAuthToken(token: string | null): void {
   authToken = token;
 }
 
-apiClient.interceptors.request.use((config) => {
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`;
+/**
+ * 메모리에 토큰이 없을 때 저장된 세션에서 꺼내오는 함수.
+ *
+ * `supabase.ts` 가 등록한다. 여기서 supabase 를 직접 import 하면 순환 참조가
+ * 된다 (`supabase.ts` → `client.ts` 의 `setAuthToken`).
+ */
+let loadStoredToken: (() => Promise<string | null>) | null = null;
+
+export function setStoredTokenLoader(loader: () => Promise<string | null>): void {
+  loadStoredToken = loader;
+}
+
+/** 같은 순간에 여러 요청이 몰려도 세션은 한 번만 읽는다. */
+let pendingLoad: Promise<string | null> | null = null;
+
+/** 세션 읽기가 안 끝나도 요청은 나가야 한다 (`useAuthSession` 과 같은 이유). */
+const TOKEN_WAIT_MS = 3000;
+
+/**
+ * 앱을 켜자마자 나가는 첫 요청이 토큰 없이 나가는 것을 막는다.
+ *
+ * `startAuthTokenSync()` 가 세션을 읽어 `setAuthToken` 을 부르는데, 화면이 그보다
+ * 먼저 떠서 쿼리를 날리면 **Authorization 헤더 없이** 나간다. 서버는
+ * `401 {"detail":"Not authenticated"}` 로 막고, 401 은 재시도 대상이 아니라
+ * 그대로 실패로 굳는다 (실기기 로그에서 확인했다).
+ */
+async function resolveToken(): Promise<string | null> {
+  if (authToken !== null) return authToken;
+  if (loadStoredToken === null) return null;
+
+  pendingLoad ??= loadStoredToken().finally(() => {
+    pendingLoad = null;
+  });
+
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), TOKEN_WAIT_MS));
+  return Promise.race([pendingLoad, timeout]);
+}
+
+apiClient.interceptors.request.use(async (config) => {
+  const token = await resolveToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: unknown) => Promise.reject(toApiError(error)),
+  (error: unknown) => {
+    const apiError = toApiError(error);
+    // [임시] 실기기 연동 점검용. 실패한 요청이 로그에 안 남아 원인을 못 봤다.
+    // 서버가 준 본문까지 그대로 찍는다 — 401 이 "토큰이 틀렸다"인지
+    // "프로필이 없다"인지는 본문으로만 갈린다.
+    const at = (error as { config?: { method?: string; url?: string } }).config;
+    const body = (error as { response?: { data?: unknown } }).response?.data;
+    console.log(
+      `[API] ${at?.method?.toUpperCase() ?? '?'} ${at?.url ?? '?'} → ${apiError.status ?? '-'} ${apiError.kind} :: ${JSON.stringify(body)}`,
+    );
+    return Promise.reject(apiError);
+  },
 );
 
 /**

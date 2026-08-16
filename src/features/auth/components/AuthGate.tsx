@@ -23,7 +23,7 @@ export interface AuthGateProps {
  * 알 수 없다. 로그인 성공 뒤 이동은 `LoginScreen` 이 직접 한다.
  */
 export function AuthGate({ children }: AuthGateProps): React.JSX.Element | null {
-  const { session, isLoading } = useAuthSession();
+  const { session, isLoading, isResolved } = useAuthSession();
   const segments = useSegments();
   const router = useRouter();
   const didResolveInitial = useRef(false);
@@ -35,7 +35,11 @@ export function AuthGate({ children }: AuthGateProps): React.JSX.Element | null 
     // expo-router 의 타입은 실제 라우트만 열거하므로 undefined 를 직접 붙여준다.
     const first: string | undefined = segments[0];
 
-    if (!didResolveInitial.current) {
+    // **`isResolved` 로 막는 게 중요하다.** `isLoading` 만 보면, 세션 확인이
+    // 3초 타임아웃으로 넘어간 순간(아직 세션을 모르는 상태)에 이 판정이
+    // 소모돼 버린다. 그러면 뒤늦게 세션이 도착해도 안쪽으로 보내주지 않아서
+    // **로그인돼 있는데 로그인 화면에 갇힌다.**
+    if (!didResolveInitial.current && isResolved) {
       didResolveInitial.current = true;
       // 이미 로그인돼 있는데 로그인 화면으로 시작했다 → 바로 안쪽으로 보낸다.
       if (session !== null && first === undefined) {
@@ -47,7 +51,7 @@ export function AuthGate({ children }: AuthGateProps): React.JSX.Element | null 
     if (session === null && !isPublicRoute(first)) {
       router.replace('/');
     }
-  }, [session, isLoading, segments, router]);
+  }, [session, isLoading, isResolved, segments, router]);
 
   // 세션을 읽는 동안에는 아무것도 그리지 않는다. 여기서 children 을 그리면
   // 로그인된 사용자에게 로그인 화면이 한 프레임 보인다.

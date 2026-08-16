@@ -7,6 +7,15 @@ export interface AuthSessionState {
   session: Session | null;
   /** 저장된 세션을 아직 읽는 중. 이때 화면을 그리면 로그인 화면이 한 번 번쩍인다. */
   isLoading: boolean;
+  /**
+   * 세션을 **실제로 읽어냈는지**. 타임아웃으로 넘어간 경우는 `false` 다.
+   *
+   * `isLoading` 과 구분해야 한다. `isLoading` 은 "화면을 그려도 되는가"이고
+   * 3초가 지나면 답을 못 받았어도 풀린다. 그때의 `session: null` 은 "로그인 안 됨"이
+   * 아니라 **"아직 모름"** 이다. 둘을 같게 다루면 로그인된 사용자를 로그인 화면에
+   * 붙잡아 두게 된다 (`AuthGate` 의 첫 진입 판정 참고).
+   */
+  isResolved: boolean;
 }
 
 /**
@@ -34,23 +43,28 @@ export interface AuthSessionState {
 const SESSION_TIMEOUT_MS = 3000;
 
 export function useAuthSession(): AuthSessionState {
-  const [state, setState] = useState<AuthSessionState>({ session: null, isLoading: true });
+  const [state, setState] = useState<AuthSessionState>({
+    session: null,
+    isLoading: true,
+    isResolved: false,
+  });
 
   useEffect(() => {
     let active = true;
 
-    // 시간 안에 답이 없으면 "로그인 안 됨"으로 보고 진행한다. 뒤늦게 세션이
-    // 도착하면 아래 onAuthStateChange 가 받아서 화면을 고쳐준다.
+    // 시간 안에 답이 없으면 화면은 일단 그린다. 다만 `isResolved` 는 켜지 않는다 —
+    // 아직 세션을 모르는 것이지 로그인이 안 된 게 아니다. 뒤늦게 도착하면
+    // 아래 둘 중 하나가 받아서 고쳐준다.
     const timer = setTimeout(() => {
       if (active) setState((prev) => (prev.isLoading ? { ...prev, isLoading: false } : prev));
     }, SESSION_TIMEOUT_MS);
 
     void supabase.auth.getSession().then(({ data }) => {
-      if (active) setState({ session: data.session, isLoading: false });
+      if (active) setState({ session: data.session, isLoading: false, isResolved: true });
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) setState({ session, isLoading: false });
+      if (active) setState({ session, isLoading: false, isResolved: true });
     });
 
     return () => {

@@ -1,9 +1,9 @@
 import { type Session } from '@supabase/supabase-js';
 import { useMutation } from '@tanstack/react-query';
 
-import { supabase } from '@/shared/api';
+import { setAuthToken, supabase } from '@/shared/api';
 
-import { ensureServerProfile } from '../api/ensureServerProfile';
+import { tryEnsureServerProfile } from '../api/ensureServerProfile';
 
 export interface EmailLoginInput {
   email: string;
@@ -13,19 +13,27 @@ export interface EmailLoginInput {
 /**
  * 이메일/비밀번호 로그인.
  *
- * 두 서버를 순서대로 거친다. 순서가 뒤바뀌면 안 된다.
- *
  * ```
- * ① Supabase   signInWithPassword           → JWT 발급 (세션은 AsyncStorage 에 저장된다)
- * ② 우리 서버  POST /api/auth/sync-profile  → 서버 DB 에 보호자 프로필 생성
+ * ① 앱 → Supabase   signInWithPassword           → JWT 발급 (세션은 AsyncStorage 에)
+ * ② 앱 → 우리 서버   POST /auth/sync-profile      → 서버 DB 의 보호자 행 보정
  * ```
  *
- * ②는 회원가입에서 이미 끝났을 것이라 보통 409 로 지나간다. 그래도 매번 부르는
- * 이유는 콘솔에서 직접 만든 계정처럼 앱의 가입 흐름을 타지 않은 계정이 있기
- * 때문이다 — 그런 계정도 여기서 프로필이 붙는다.
+ * ## ②는 실패해도 로그인을 막지 않는다
  *
- * 토큰은 따로 다루지 않는다 — `startAuthTokenSync()` 가 `onAuthStateChange` 를
- * 구독하고 있어서 ①이 성공하는 순간 `apiClient` 에 자동으로 실린다.
+ * 서버에 `parents` 행이 없으면 뒤따르는 화면들이 전부 401 로 막힌다(백엔드 확인).
+ * 앱의 가입 흐름을 타지 않은 계정 — 콘솔에서 직접 만든 것, 가입 도중 실패한 것 —
+ * 도 여기서 붙어야 해서 로그인할 때마다 한 번 부른다. 이미 있으면 409 로 지나간다.
+ *
+ * **다만 실패를 로그인 실패로 다루지 않는다** (`tryEnsureServerProfile`).
+ * 예전에는 실패 시 Supabase 세션까지 되돌려서, 백엔드 설정 문제 하나로 비밀번호가
+ * 맞는데도 아무도 로그인할 수 없었다 (기기에서 재현: Supabase `token` 200 →
+ * 우리 서버 401 → 앱이 `logout`).
+ *
+ * ## ①과 ② 사이에 토큰을 직접 싣는다
+ *
+ * `startAuthTokenSync()` 의 `onAuthStateChange` 도 같은 일을 하지만 **그 콜백이
+ * ②보다 늦게 도는 일이 있다.** 그러면 ②가 Authorization 헤더 없이 나가고 서버는
+ * `401 {"detail":"Not authenticated"}` 로 막는다.
  */
 export function useEmailLogin() {
   return useMutation<Session, unknown, EmailLoginInput>({
@@ -39,7 +47,13 @@ export function useEmailLogin() {
 
       if (error) throw error;
 
-      await ensureServerProfile(data.user);
+      // ②가 헤더 없이 나가지 않도록 여기서 먼저 싣는다 (위 주석 참고).
+      setAuthToken(data.session.access_token);
+
+      // 서버 프로필 보정. 실패해도 로그인은 성립시킨다.
+      // **기다리는 이유**: 여기서 안 기다리면 아이 목록 요청이 프로필보다 먼저 나간다.
+      await tryEnsureServerProfile(data.user);
+
       return data.session;
     },
   });
