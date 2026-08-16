@@ -31,12 +31,27 @@ import { useChildRecorder } from '../hooks/useChildRecorder';
 import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
 
 /**
- * 읽어주기가 실패했을 때를 위한 최소 대기 시간.
+ * 읽어주기가 **시작조차 못 했는지** 판단하는 시간.
  *
- * 기기에 한국어 음성이 없으면 `onDone` 이 안 올 수 있다. 그때도 아이 차례는
- * 와야 하므로 안전장치로 둔다 (`Appear` 의 타이머와 같은 이유).
+ * 기기에 한국어 음성이 없거나 엔진이 죽어 있으면 `onDone` 도 `onError` 도 안 오는
+ * 경우가 있다. 읽어주는 동안에는 화면에 누를 것이 하나도 없으므로(디자인 380:342),
+ * 그대로 두면 **아이가 아무 버튼도 없는 화면에 갇힌다.**
+ *
+ * 이 시간 뒤에도 소리가 시작되지 않았으면 읽기를 포기하고 다음으로 넘긴다.
  */
-const NARRATION_FALLBACK_MS = 2500;
+const SPEECH_START_TIMEOUT_MS = 3000;
+
+/**
+ * 읽어주기가 시작은 했는데 **끝났다는 신호가 안 올 때**의 최후 상한.
+ *
+ * 글자 수에 비례해 잡는다 — 짧은 대사에 30초를 기다리면 멈춘 것처럼 보이고,
+ * 긴 나레이션에 고정 몇 초를 주면 읽는 도중에 버튼이 튀어나온다.
+ * (예전에 2.5초 고정이었는데, 15초짜리 나레이션 중간에 넘어가 버렸다.)
+ */
+function speechDeadlineMs(text: string): number {
+  // 한국어 TTS 가 대략 초당 5~6자다. 넉넉히 잡고 시작 지연까지 더한다.
+  return 8000 + text.length * 400;
+}
 
 /**
  * 배경 그림 위에 글을 얹으려면 그림을 죽여야 한다. 디자인 실측(40%).
@@ -72,7 +87,17 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const storyId = id ?? '';
 
   const [step, setStep] = useState<SessionStep | null>(null);
-  const [micState, setMicState] = useState<MicState>('blocked');
+  /**
+   * 지금 읽어주는 중인지.
+   *
+   * **마이크 상태와 분리해서 들고 있다.** 예전에는 `micState = 'blocked'` 하나로
+   * "읽어주는 중"까지 표현했는데, 디자인의 마이크 가이드(86:448)는 상태를 **3개**
+   * (준비 완료 · 듣고 있어요 · 정리 중)만 정의하고 나레이션 시안(380:342)에는
+   * 마이크가 아예 없다. 읽어주는 동안은 마이크가 존재하지 않는 시간이라
+   * 마이크의 한 상태로 표현하면 안 된다.
+   */
+  const [isReading, setIsReading] = useState(true);
+  const [micState, setMicState] = useState<MicState>('ready');
   const [reply, setReply] = useState<string | null>(null);
   /** 등장인물의 답. `speak` 응답으로 갱신되며, 장면이 끝나면 마무리 대사가 된다. */
   const [characterLine, setCharacterLine] = useState<string | null>(null);
@@ -115,26 +140,42 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   }, [childId, storyId]);
 
   /**
-   * 장면이 바뀌면 나레이션을 읽어주고, 다 읽으면 아이 차례로 넘긴다.
+   * 장면이 바뀌면 읽어주고, 다 읽으면 아이 차례로 넘긴다.
    *
-   * **TTS 는 앱이 맡는다** — 서버는 글만 준다. 읽어주기가 안 되는 기기에서도
-   * 아이 차례는 와야 하므로 타이머를 안전장치로 함께 건다.
+   * **TTS 는 앱이 맡는다** — 서버는 글만 준다. 읽어주는 동안 화면에는 누를 것이
+   * 하나도 없으므로(디자인 380:342), 읽기가 조용히 실패하면 아이가 갇힌다.
+   * 그래서 안전장치를 **두 겹**으로 건다.
+   *
+   * 1. 소리가 시작조차 안 되면 (`SPEECH_START_TIMEOUT_MS`)
+   * 2. 시작은 했는데 끝났다는 신호가 안 오면 (`speechDeadlineMs`)
    */
   useEffect(() => {
-    if (step === null || micState !== 'blocked') return;
+    if (step === null || !isReading) return;
 
     // 대화 장면이면 등장인물의 첫 대사를, 아니면 줄거리를 읽는다.
     const line = step.kind === 'narration' ? step.sceneDescription : (step.characterOpening ?? '');
 
-    // 다 읽으면 아이 차례. 읽어주기가 안 되는 기기에서는 아래 타이머가 대신 넘긴다.
-    speech.speak(line, () => setMicState('ready'));
+    speech.speak(line, () => setIsReading(false));
 
-    const timer = setTimeout(() => setMicState('ready'), NARRATION_FALLBACK_MS);
+    const deadline = setTimeout(() => setIsReading(false), speechDeadlineMs(line));
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(deadline);
     // speech 는 매 렌더 같은 참조라 의존성에 넣으면 무한 재생된다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, micState]);
+  }, [step, isReading]);
+
+  /**
+   * 읽어주기가 **시작조차 못 한** 경우를 건져낸다.
+   *
+   * 소리가 나기 시작하면 이 효과가 다시 돌면서 타이머를 걷어간다 — 그러면 끝까지
+   * 기다린다. 여기서 성급하게 넘기면 읽는 도중에 버튼이 튀어나온다.
+   */
+  useEffect(() => {
+    if (!isReading || speech.isSpeaking) return;
+
+    const timer = setTimeout(() => setIsReading(false), SPEECH_START_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isReading, speech.isSpeaking]);
 
   const backButton = (
     <PressableScale
@@ -183,7 +224,9 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
       {
         onSuccess: (next) => {
           setStep(next);
-          setMicState('blocked');
+          // 새 장면은 읽어주기부터 시작한다. 마이크는 다 읽은 뒤에야 나타난다.
+          setIsReading(true);
+          setMicState('ready');
           setReply(null);
           setCharacterLine(null);
           setSceneEnded(false);
@@ -219,8 +262,12 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
 
   /** 마이크는 아이 차례일 때 녹음을 시작하고, 녹음 중이면 멈춰서 서버로 보낸다. */
   const handleMicPress = (): void => {
+    // 장면이 끝난 뒤에는 서버가 발화를 받지 않는다("이 장면에서는 말할 수 없습니다").
+    // 눌러도 400 만 받고 아이에게는 아무 일도 안 일어난 것처럼 보이므로 여기서 막는다.
+    if (sceneEnded) return;
+
     if (micState === 'ready') {
-      // 아직 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 녹음되면 안 된다.
+      // 등장인물의 대답을 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 녹음되면 안 된다.
       speech.stop();
       setReply(null);
       setMicState('listening');
@@ -269,8 +316,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
     );
   };
 
-  // 대화 장면은 장면이 끝나야 넘어갈 수 있다. 나레이션은 읽고 나면 바로 넘어간다.
-  const canSend = isNarration ? micState !== 'blocked' : sceneEnded;
+  // 대화 장면은 서버가 끝났다고 해야 넘어갈 수 있다. 나레이션은 다 읽으면 바로다.
+  const canSend = isNarration ? !isReading : sceneEnded;
 
   return (
     <Screen padded={false} maxContentWidth={null}>
@@ -297,13 +344,17 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
             <NarrationPanel
               badge={step.mission === null ? '이야기 줄거리' : '이야기 상황'}
               text={step.sceneDescription}
-              onReplay={() => speech.speak(step.sceneDescription)}
+              // 읽는 도중에 누르면 원래 재생이 `stop()` 으로 끊겨 완료 콜백이 오지
+              // 않는다. 다시 듣기도 끝나면 같은 신호를 줘야 버튼이 나타난다.
+              onReplay={() => speech.speak(step.sceneDescription, () => setIsReading(false))}
             />
           </Appear>
 
           {/* 오른쪽: 배경 그림 위에 대화와 마이크가 얹힌다. */}
           <View style={styles.sceneColumn}>
             <Image
+              // `imageUrl` 은 `toRemoteImageUri` 를 통과한 값이라, 받아올 수 없는
+              // 객체 키가 오면 여기서 null 이 되어 번들 그림으로 떨어진다.
               source={step.imageUrl === null ? FALLBACK_BACKGROUND : { uri: step.imageUrl }}
               resizeMode="cover"
               style={styles.backdrop}
@@ -321,13 +372,15 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
               />
             </View>
 
-            {micState !== 'blocked' && step.characterName !== null && (
+            {/* 말풍선은 **읽어주는 동안에도** 보인다 (시안 161:1158). 소리만 나고
+                글이 없으면 아이가 무슨 말인지 따라갈 수가 없다. */}
+            {step.characterName !== null && (
               <View style={styles.chat}>
                 <CharacterBubble
                   speaker={step.characterName}
                   text={characterLine ?? step.characterOpening ?? ''}
                 />
-                {micState === 'listening' && <ListeningHint />}
+                {micState === 'listening' && !isReading && <ListeningHint />}
                 {reply !== null && <ChildBubble text={reply} />}
               </View>
             )}
@@ -339,12 +392,21 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
               )}
 
               <View style={styles.micArea}>
-                {/* 나레이션 장면에는 말할 차례가 없다. 마이크는 잠긴 채로 둔다. */}
-                <MicControl state={isNarration ? 'blocked' : micState} onPress={handleMicPress} />
+                {/*
+                  읽어주는 동안에는 마이크도 보내기도 없다 (나레이션 시안 380:342).
+                  **"화면에 뭔가 나타나면 내 차례"** 가 이 화면의 유일한 신호다 —
+                  회색 마이크를 계속 띄워두면 언제가 자기 차례인지 알 수가 없다.
+
+                  마이크는 대화 장면에만 있다. 나레이션 장면은 서버가 발화를 받지
+                  않으므로(`speak` 가 400) 보내기만 나온다.
+                */}
+                {!isReading && !isNarration && (
+                  <MicControl state={micState} onPress={handleMicPress} />
+                )}
 
                 {/* 보내기는 자리를 늘 비워둔다 — 생겼다 사라지면 위의 마이크가 움직인다. */}
                 <View style={styles.sendSlot}>
-                  {micState !== 'blocked' && (
+                  {!isReading && (
                     <Button
                       label={isLastScene ? '마치기' : '보내기'}
                       // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
