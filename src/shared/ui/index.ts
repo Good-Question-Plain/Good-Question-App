@@ -6,6 +6,7 @@ export { BottomTabBar, TABS, type BottomTabBarProps, type TabKey } from './Botto
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
 export { ChildSwitcher, type ChildSwitcherOption, type ChildSwitcherProps } from './ChildSwitcher';
+export { VoiceInstallNotice } from './VoiceInstallNotice';
 export {
   ChildProfileModal,
   type ChildProfileModalProps,
