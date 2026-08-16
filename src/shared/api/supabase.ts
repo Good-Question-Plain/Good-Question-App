@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { env } from '@/shared/config/env';
 
-import { setAuthToken, setStoredTokenLoader } from './client';
+import { setAuthToken, setAuthTokenRefresher, setStoredTokenLoader } from './client';
 import { queryClient } from './queryClient';
 
 /**
@@ -66,6 +66,29 @@ export function startAuthTokenSync(): () => void {
   setStoredTokenLoader(async () => {
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
+  });
+
+  /**
+   * 백엔드가 401 을 주면 토큰을 한 번 되살린다 (`apiClient` 가 부른다).
+   *
+   * `AppState` 로 자동 갱신을 살려놔도 만료를 앞지르지 못하는 순간이 있다 —
+   * 기기가 잠들어 있던 사이 만료됐거나, 시계가 어긋났거나, 갱신 요청 자체가
+   * 한 번 실패한 경우다. 그때 여기가 마지막 방어선이 된다.
+   */
+  setAuthTokenRefresher(async () => {
+    const { data, error } = await supabase.auth.refreshSession();
+    const token = data.session?.access_token ?? null;
+    if (token !== null) return token;
+
+    // **네트워크가 잠깐 끊긴 것으로는 로그아웃시키지 않는다.** 지하철에서 잠깐
+    // 끊겼다고 이야기 도중에 로그인 화면으로 튕기면 아이는 영문을 모른다.
+    // 이 경우 요청은 401 로 실패하지만 세션은 그대로라 다음 요청에서 회복된다.
+    if (error !== null && isAuthRetryableFetchError(error)) return null;
+
+    // 되살릴 수 없는 세션이다. 정리하면 `AuthGate` 가 로그인 화면으로 되돌린다.
+    // `scope: 'local'` — 인자를 안 주면 그 계정의 **모든 기기** 세션이 끊긴다.
+    await supabase.auth.signOut({ scope: 'local' });
+    return null;
   });
 
   // 앱을 껐다 켜면 세션은 AsyncStorage 에 남아 있지만 메모리의 토큰은 비어 있다.
