@@ -46,12 +46,16 @@ export function OrderCard({
       >
         <View style={[styles.tile, selected && styles.tileSelected]}>
           {/* 서버 그림이 있으면 그걸 쓰고, 없으면 번들 아이콘으로 떨어진다.
-              둘 다 없으면 빈 타일이 남는데 카드 크기는 그대로라 배열은 안 깨진다. */}
+              둘 다 없으면 빈 타일이 남는데 카드 크기는 그대로라 배열은 안 깨진다.
+
+              **서버 그림은 타일을 꽉 채운다.** 시안의 타일은 카드 폭을 채우는 면이고,
+              장면 사진을 아이콘 크기(66)로 줄여 가운데 두면 무엇을 그린 건지 안 보인다.
+              번들 아이콘은 선화라 그대로 실측 크기로 둔다. */}
           {imageUrl !== undefined ? (
             <Image
               source={{ uri: imageUrl }}
-              style={{ width: iconSize, height: iconSize }}
-              resizeMode="contain"
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
               accessibilityIgnoresInvertColors
             />
           ) : (
@@ -159,6 +163,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
+    // 타일을 꽉 채우는 그림이 모서리 밖으로 나가지 않게 한다.
+    overflow: 'hidden',
     backgroundColor: colors.surfaceAccentWarm,
   },
   tileSelected: {
