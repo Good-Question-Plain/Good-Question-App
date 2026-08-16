@@ -9,6 +9,8 @@ export interface ActiveChildResult {
   children: Child[];
   isLoading: boolean;
   isError: boolean;
+  /** 목록을 다시 받아온다. 불러오기에 실패한 화면의 "다시 시도" 가 쓴다. */
+  retry: () => void;
   selectChild: (childId: string) => void;
 }
 
@@ -23,12 +25,19 @@ export interface ActiveChildResult {
  * 남지 않아야 한다.
  */
 export function useActiveChild(): ActiveChildResult {
-  const { data, isLoading, isError } = useChildren();
+  const { data, isLoading, isError, refetch } = useChildren();
   const activeChildId = useActiveChildStore((state) => state.activeChildId);
   const selectChild = useActiveChildStore((state) => state.selectChild);
 
   const children = data ?? [];
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
 
-  return { activeChild, children, isLoading, isError, selectChild };
+  return {
+    activeChild,
+    children,
+    isLoading,
+    isError,
+    retry: () => void refetch(),
+    selectChild,
+  };
 }
