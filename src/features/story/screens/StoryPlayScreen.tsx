@@ -78,6 +78,13 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const [characterLine, setCharacterLine] = useState<string | null>(null);
   const [sceneEnded, setSceneEnded] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  /**
+   * 단어 목록을 펼쳤는지. 시안은 접힌 상태가 기본이다.
+   *
+   * 장면이 바뀌면 단어도 바뀌므로 다시 접는다 — 펼친 채로 두면 이전 장면의
+   * 길이만큼 그림을 가린 채 새 단어가 들어온다.
+   */
+  const [wordsExpanded, setWordsExpanded] = useState(false);
 
   const start = useStartStorySession(childId);
   const enterStep = useEnterStep(childId);
@@ -180,6 +187,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
           setReply(null);
           setCharacterLine(null);
           setSceneEnded(false);
+          // 새 장면의 단어는 접힌 채로 시작한다.
+          setWordsExpanded(false);
         },
       },
     );
@@ -290,12 +299,6 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
               text={step.sceneDescription}
               onReplay={() => speech.speak(step.sceneDescription)}
             />
-
-            <SceneWordPicker
-              words={step.vocabularies}
-              onToggle={handleToggleWord}
-              disabled={selectWord.isPending}
-            />
           </Appear>
 
           {/* 오른쪽: 배경 그림 위에 대화와 마이크가 얹힌다. */}
@@ -306,6 +309,17 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
               style={styles.backdrop}
               accessibilityIgnoresInvertColors
             />
+
+            {/* 단어 고르기는 그림 오른쪽 위에 겹친다 (디자인 실측: 오른쪽 19 · 위 11). */}
+            <View style={styles.wordPicker}>
+              <SceneWordPicker
+                words={step.vocabularies}
+                onToggle={handleToggleWord}
+                expanded={wordsExpanded}
+                onToggleExpanded={() => setWordsExpanded((prev) => !prev)}
+                disabled={selectWord.isPending}
+              />
+            </View>
 
             {micState !== 'blocked' && step.characterName !== null && (
               <View style={styles.chat}>
@@ -416,6 +430,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     opacity: BACKDROP_OPACITY,
+  },
+  // 그림 위에 겹쳐 놓는다. 실측: 그림(539×687) 기준 오른쪽 19 · 위 11.
+  wordPicker: {
+    position: 'absolute',
+    top: 11,
+    right: 19,
+    // 대화 말풍선이 이 자리로 올라와도 단어 상자가 위에 있어야 누를 수 있다.
+    zIndex: 1,
   },
   chat: {
     gap: spacing.lg,

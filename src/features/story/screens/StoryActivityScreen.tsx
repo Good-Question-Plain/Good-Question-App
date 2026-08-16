@@ -18,7 +18,7 @@ import {
 import { usePostActivity, useStoryProgress, useSubmitCardOrder } from '../api/queries';
 import { GuideBubble } from '../components/GuideBubble';
 import { OrderCard } from '../components/OrderCard';
-import type { StoryCard } from '../model/activity';
+import { KEYWORD_SEPARATOR, type StoryCard } from '../model/activity';
 
 /** 활동은 두 단계다. 지금은 첫 단계(순서 맞추기)만 이 화면이 맡는다. */
 const ACTIVITY_STEP = 1;
@@ -194,7 +194,14 @@ export function StoryActivityScreen({ childId }: StoryActivityScreenProps): Reac
               label="이제 이야기를 만들어볼까?"
               size="xl"
               style={styles.wideCta}
-              onPress={() => router.replace({ pathname: '/story/[id]/retell', params: { id } })}
+              // 핵심 단어는 정답을 맞힐 때만 서버가 준다(`submit` 응답). 다시 받아올
+              // 엔드포인트가 없으므로 완료 화면과 같은 방식으로 다음 화면에 넘긴다.
+              onPress={() =>
+                router.replace({
+                  pathname: '/story/[id]/retell',
+                  params: { id, keywords: keywords.join(KEYWORD_SEPARATOR) },
+                })
+              }
             />
           ) : result === 'wrong' ? (
             <Button label="다시 놓아보기" size="xl" style={styles.retryCta} onPress={retry} />

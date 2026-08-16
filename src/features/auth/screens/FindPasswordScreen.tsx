@@ -114,9 +114,10 @@ export function FindPasswordScreen(): React.JSX.Element {
       {step === 1 && (
         <Appear key="step1" style={styles.step}>
           <View>
-            <Text variant="heading">가입한 이메일을 입력해주세요</Text>
+            {/* 시안(86:665)은 제목이 "비밀번호를 잊으셨나요?" 이고 그 아래가 안내다. */}
+            <Text variant="heading">비밀번호를 잊으셨나요?</Text>
             <Text variant="footnote" color="textMuted">
-              인증코드를 보내드려요
+              가입한 이메일을 입력해주세요
             </Text>
           </View>
           <Input
@@ -230,6 +231,8 @@ export function FindPasswordScreen(): React.JSX.Element {
             }}
             confirm={confirm}
             onConfirmChange={setConfirm}
+            // 재설정 화면은 시안이 "새 비밀번호" 로 적혀 있다 (86:708).
+            newLabel
           />
           {resetError !== undefined && (
             <Text variant="footnote" color="danger">

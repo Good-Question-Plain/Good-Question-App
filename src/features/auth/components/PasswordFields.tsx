@@ -8,6 +8,13 @@ export interface PasswordFieldsProps {
   onPasswordChange: (value: string) => void;
   confirm: string;
   onConfirmChange: (value: string) => void;
+  /**
+   * 두 칸의 안내 문구.
+   *
+   * 회원가입은 "비밀번호", 비밀번호 재설정은 **"새 비밀번호"** 로 시안이 다르다
+   * (86:708). 나머지는 같아서 문구만 바꿔 쓴다.
+   */
+  newLabel?: boolean;
 }
 
 /** PRD 기준: 8자 이상, 영문+숫자 조합. */
@@ -27,14 +34,16 @@ export function PasswordFields({
   onPasswordChange,
   confirm,
   onConfirmChange,
+  newLabel = false,
 }: PasswordFieldsProps): React.JSX.Element {
   const confirmTouched = confirm.length > 0;
   const matches = confirmTouched && password === confirm;
+  const prefix = newLabel ? '새 ' : '';
 
   return (
     <View style={styles.container}>
       <Input
-        placeholder="비밀번호"
+        placeholder={`${prefix}비밀번호`}
         value={password}
         onChangeText={onPasswordChange}
         secureTextEntry
@@ -44,7 +53,7 @@ export function PasswordFields({
         status={password.length > 0 && !isValidPassword(password) ? 'error' : 'default'}
       />
       <Input
-        placeholder="비밀번호 확인"
+        placeholder={`${prefix}비밀번호 확인`}
         value={confirm}
         onChangeText={onConfirmChange}
         secureTextEntry

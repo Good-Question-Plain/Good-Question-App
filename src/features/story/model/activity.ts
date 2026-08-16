@@ -15,3 +15,17 @@ export interface StoryCard {
   Icon?: FC<SvgProps>;
   imageUrl?: string;
 }
+
+/**
+ * 핵심 단어를 라우트 파라미터로 넘길 때 쓰는 구분자.
+ *
+ * 서버는 이 낱말들을 순서 맞추기 `submit` 응답에서 **한 번만** 준다. 다시 받아올
+ * 엔드포인트가 없어서 다시 말하기 화면으로 넘기려면 라우트 파라미터밖에 없다.
+ * U+001F(unit separator)는 낱말에 들어갈 수 없는 문자라 쉼표와 달리 섞일 걱정이 없다.
+ *
+ * **넘기는 쪽(`StoryActivityScreen`)과 받는 쪽(`StoryRetellScreen`)이 같은 값을 써야
+ * 한다.** 한쪽만 달라지면 낱말이 글자 단위로 쪼개져 칩이 낱자로 뜬다 (실제로 그렇게
+ * 어긋나 있었다). 화면에 리터럴로 흩어 두면 **눈에 안 보이는 문자라 어긋난 걸
+ * 알아챌 수 없어서** 한 곳에 모으고, 코드에서도 보이도록 코드포인트로 적는다.
+ */
+export const KEYWORD_SEPARATOR = String.fromCharCode(0x1f);
