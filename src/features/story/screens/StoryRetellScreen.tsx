@@ -37,7 +37,11 @@ const ACTIVITY_TOTAL = 2;
  */
 export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JSX.Element {
   const router = useRouter();
-  const { id, keywords } = useLocalSearchParams<{ id: string; keywords?: string }>();
+  const { id, keywords, order } = useLocalSearchParams<{
+    id: string;
+    keywords?: string;
+    order?: string;
+  }>();
   const storyId = id ?? '';
 
   /**
@@ -103,6 +107,27 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
       </Screen>
     );
   }
+
+  /**
+   * 이야기 카드를 **아이가 방금 맞힌 순서**로 세운다.
+   *
+   * 서버가 주는 `activity.cards` 는 섞여 있고(매 요청마다 다시 섞인다), 정답
+   * 순서를 알려주는 응답은 없다. 앞 화면이 넘겨준 순서를 쓰지 않으면 섞인 배열에
+   * 1~9 를 붙이게 되어, **아이가 방금 맞춘 것과 다른 번호가 카드에 뜬다.**
+   *
+   * 순서를 못 받았거나(직접 이 화면으로 들어온 경우) 목록이 어긋나면 서버 순서
+   * 그대로 둔다 — 번호가 틀리는 것보다는 낫다.
+   */
+  const orderedCards = (() => {
+    if (order === undefined || order === '') return activity.cards;
+
+    const sceneIds = order.split(KEYWORD_SEPARATOR);
+    const sorted = sceneIds
+      .map((sceneId) => activity.cards.find((card) => card.sceneId === sceneId))
+      .filter((card) => card !== undefined);
+
+    return sorted.length === activity.cards.length ? sorted : activity.cards;
+  })();
 
   const handleMicPress = (): void => {
     setSpoke(true);
@@ -207,7 +232,7 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
             <View style={styles.cardColumn}>
               <Text variant="captionStrong">이야기 카드</Text>
               <View style={styles.cardStrip}>
-                {activity.cards.map((card, index) => (
+                {orderedCards.map((card, index) => (
                   <OrderCard
                     key={card.sceneId}
                     card={{

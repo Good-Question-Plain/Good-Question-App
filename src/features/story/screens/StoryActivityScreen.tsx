@@ -196,10 +196,18 @@ export function StoryActivityScreen({ childId }: StoryActivityScreenProps): Reac
               style={styles.wideCta}
               // 핵심 단어는 정답을 맞힐 때만 서버가 준다(`submit` 응답). 다시 받아올
               // 엔드포인트가 없으므로 완료 화면과 같은 방식으로 다음 화면에 넘긴다.
+              //
+              // **카드 순서도 같이 넘긴다.** 서버가 주는 카드 배열은 섞여 있고 정답
+              // 순서는 방금 아이가 맞힌 이 순서뿐이다. 안 넘기면 다시 말하기 화면이
+              // 섞인 순서에 1~9 를 붙여서, 아이가 방금 맞춘 것과 다른 번호가 뜬다.
               onPress={() =>
                 router.replace({
                   pathname: '/story/[id]/retell',
-                  params: { id, keywords: keywords.join(KEYWORD_SEPARATOR) },
+                  params: {
+                    id,
+                    keywords: keywords.join(KEYWORD_SEPARATOR),
+                    order: ordered.map((card) => card.id).join(KEYWORD_SEPARATOR),
+                  },
                 })
               }
             />
