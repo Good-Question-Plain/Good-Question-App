@@ -19,6 +19,7 @@ import { usePostActivity, useStoryProgress, useSubmitCardOrder } from '../api/qu
 import { GuideBubble } from '../components/GuideBubble';
 import { OrderCard } from '../components/OrderCard';
 import { KEYWORD_SEPARATOR, type StoryCard } from '../model/activity';
+import { DEMO_KEY_WORDS } from '../model/demoContent';
 
 /** 활동은 두 단계다. 지금은 첫 단계(순서 맞추기)만 이 화면이 맡는다. */
 const ACTIVITY_STEP = 1;
@@ -115,7 +116,10 @@ export function StoryActivityScreen({ childId }: StoryActivityScreenProps): Reac
     submit.mutate([...picked], {
       onSuccess: (outcome) => {
         setResult(outcome.isCorrect ? 'correct' : 'wrong');
-        setKeywords(outcome.vocabulary?.map((word) => word.word) ?? []);
+        // 서버가 정답일 때 주기로 한 `vocabulary` 가 아직 빈 배열이라(인수인계 1-3)
+        // 칩이 하나도 안 뜬다. 비어 있을 때만 임시 낱말로 채운다.
+        const words = outcome.vocabulary?.map((word) => word.word) ?? [];
+        setKeywords(words.length > 0 ? words : [...DEMO_KEY_WORDS]);
       },
     });
   };

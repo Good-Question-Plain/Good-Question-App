@@ -30,6 +30,8 @@ import { CharacterBubble, ChildBubble, ListeningHint } from '../components/Speec
 import { useChildRecorder } from '../hooks/useChildRecorder';
 import { useDictation } from '../hooks/useDictation';
 import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
+import { demoMission, demoSceneVocabularies, demoSpeakResult } from '../model/demoContent';
+import { useDemoSessionStore } from '../model/demoSessionStore';
 import { useLastStoryStore } from '../model/lastStoryStore';
 
 /**
@@ -123,6 +125,12 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   const dictation = useDictation();
 
   const rememberStory = useLastStoryStore((state) => state.rememberStory);
+  const startDemoSession = useDemoSessionStore((state) => state.start);
+  const addUtterance = useDemoSessionStore((state) => state.addUtterance);
+  const toggleDemoWord = useDemoSessionStore((state) => state.toggleWord);
+  const demoWords = useDemoSessionStore((state) => state.words);
+  /** 임시 대화에서 몇 번째 주고받는 중인지. 서버가 받아주면 서버의 `turn` 을 쓴다. */
+  const [demoTurn, setDemoTurn] = useState(0);
 
   // 화면에 들어오면 세션을 연다. 같은 이야기를 이미 보던 중이면 이어하기가 된다.
   useEffect(() => {
@@ -130,6 +138,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
 
     // 리포트가 "어느 이야기인지" 를 여기서만 알 수 있다 (`lastStoryStore` 주석 참고).
     rememberStory(storyId);
+    startDemoSession(storyId, storyTitle ?? '');
 
     start.mutate(storyId, {
       onSuccess: (session) => setStep(session.step),
@@ -244,6 +253,23 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
    */
   const serverAcceptsSpeech = !isNarration;
 
+  /**
+   * 이 장면에서 고를 수 있는 낱말.
+   *
+   * **서버 값이 있으면 서버가 이긴다.** 지금은 모든 장면이 빈 배열이라(인수인계 1-1)
+   * 목록 자체가 안 뜨므로, 비어 있을 때만 임시 낱말을 쓴다 (`demoContent`).
+   */
+  const usesDemoWords = step.vocabularies.length === 0;
+  const sceneWords = usesDemoWords
+    ? demoSceneVocabularies(current, total).map((word) => ({
+        ...word,
+        selected: demoWords.some((picked) => picked.id === word.id),
+      }))
+    : step.vocabularies;
+
+  /** 미션도 마찬가지다. 서버가 주기 시작하면 그쪽이 쓰인다. */
+  const sceneMission = step.mission ?? (serverAcceptsSpeech ? null : demoMission(current));
+
   /** 다음 장면으로. 마지막이면 이야기 후 활동으로 넘어간다. */
   const goNextScene = (): void => {
     if (isLastScene) {
@@ -261,6 +287,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
           setMicState('ready');
           // 앞 장면에서 받아쓴 말이 남아 있으면 새 장면의 아이 말풍선으로 보인다.
           dictation.reset();
+          setDemoTurn(0);
           setReply(null);
           setCharacterLine(null);
           setSceneEnded(false);
@@ -319,6 +346,18 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
       // 마지막 문장이 확정되기까지 잠깐 걸리므로 여기서 복사해두지 않는다.
       dictation.stop();
       setMicState('ready');
+
+      // 서버가 이 장면의 발화를 안 받아주므로 등장인물의 대답도 앱이 만든다
+      // (`demoContent` 참고). 아이 말에 아무 반응이 없으면 대화가 아니게 된다.
+      const nextTurn = demoTurn + 1;
+      const result = demoSpeakResult(current, nextTurn, dictation.text);
+
+      setDemoTurn(nextTurn);
+      addUtterance();
+      setCharacterLine(result.characterLine);
+      setSceneEnded(result.sceneEnded);
+      setStep((prev) => (prev === null ? prev : { ...prev, mission: result.mission }));
+      if (result.characterLine !== null) speech.speak(result.characterLine);
       return;
     }
 
@@ -352,6 +391,17 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
   };
 
   const handleToggleWord = (word: SceneVocabulary): void => {
+    // 임시 낱말은 서버에 저장할 id 가 없다. 화면 표시와 단어장 기록만 앱이 맡는다.
+    if (usesDemoWords) {
+      toggleDemoWord({
+        id: word.id,
+        word: word.word,
+        definition: word.definition,
+        example: word.exampleSentence,
+      });
+      return;
+    }
+
     selectWord.mutate(
       { storyId, stepIndex: current, sceneVocabularyId: word.id, selected: !word.selected },
       {
@@ -397,7 +447,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
           {/* 왼쪽: 줄거리. 장면이 바뀌면 새로 나타나야 아이가 "넘어갔다"를 안다. */}
           <Appear key={current} style={styles.narrationColumn}>
             <NarrationPanel
-              badge={step.mission === null ? '이야기 줄거리' : '이야기 상황'}
+              badge={sceneMission === null ? '이야기 줄거리' : '이야기 상황'}
               text={step.sceneDescription}
               // 읽는 도중에 누르면 원래 재생이 `stop()` 으로 끊겨 완료 콜백이 오지
               // 않는다. 다시 듣기도 끝나면 같은 신호를 줘야 버튼이 나타난다.
@@ -419,7 +469,7 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
             {/* 단어 고르기는 그림 오른쪽 위에 겹친다 (디자인 실측: 오른쪽 19 · 위 11). */}
             <View style={styles.wordPicker}>
               <SceneWordPicker
-                words={step.vocabularies}
+                words={sceneWords}
                 onToggle={handleToggleWord}
                 expanded={wordsExpanded}
                 onToggleExpanded={() => setWordsExpanded((prev) => !prev)}
@@ -444,8 +494,8 @@ export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): 
 
             {/* 미션과 마이크는 한 덩어리로 아래에 붙는다 (디자인 실측: 바닥에서 23). */}
             <View style={styles.bottomStack}>
-              {step.mission !== null && (
-                <ScenePanel badge="미션" text={step.mission.condition} align="center" />
+              {sceneMission !== null && (
+                <ScenePanel badge="미션" text={sceneMission.condition} align="center" />
               )}
 
               <View style={styles.micArea}>

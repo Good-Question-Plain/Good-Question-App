@@ -20,6 +20,7 @@ import { usePostActivity, useStoryProgress, useSubmitRetelling } from '../api/qu
 import { OrderCard } from '../components/OrderCard';
 import { useDictation } from '../hooks/useDictation';
 import { KEYWORD_SEPARATOR } from '../model/activity';
+import { useDemoSessionStore } from '../model/demoSessionStore';
 
 const ACTIVITY_STEP = 2;
 
@@ -67,6 +68,7 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
    * (`useDictation`). 서버가 음성 파일을 받게 바뀌면 여기만 갈아끼운다.
    */
   const dictation = useDictation();
+  const demo = useDemoSessionStore();
   const transcript = dictation.text;
   /** 마이크를 한 번이라도 눌렀는지. 완료 버튼을 열어주는 조건 중 하나다. */
   const [spoke, setSpoke] = useState(false);
@@ -154,8 +156,13 @@ export function StoryRetellScreen({ childId }: StoryRetellScreenProps): React.JS
           params: {
             id: storyId,
             title: result.storyTitle,
-            turns: String(result.utteranceCount),
-            words: String(result.newVocabularyCount),
+            // 서버는 아이 발화를 하나도 못 받았으므로 0 을 준다(인수인계 1-1).
+            // 그럴 때만 앱이 세어둔 값으로 채운다 — 완료 화면이 "0번 · 0개" 로 남으면
+            // 이야기를 끝낸 보람이 사라진다.
+            turns: String(result.utteranceCount > 0 ? result.utteranceCount : demo.utterances),
+            words: String(
+              result.newVocabularyCount > 0 ? result.newVocabularyCount : demo.words.length,
+            ),
           },
         }),
     });

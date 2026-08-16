@@ -16,7 +16,7 @@ import {
 import { useToggleWordSaved, useWords } from '../api/queries';
 import { StoryWordGroup } from '../components/StoryWordGroup';
 import { WordCard } from '../components/WordCard';
-import { groupByStory } from '../model/types';
+import { groupByStory, type WordEntry } from '../model/types';
 
 const FILTERS = ['전체', '이야기별'] as const;
 type Filter = (typeof FILTERS)[number];
@@ -38,6 +38,14 @@ export interface WordbookScreenProps {
   childId: string;
   /** 카드 뱃지에 쓸 이름. 목록이 이미 이 아이 것으로 걸러져 있다. */
   childName: string;
+  /**
+   * 서버 목록이 비었을 때 대신 보여줄 단어들.
+   *
+   * 서버가 아이 발화를 못 받아서(인수인계 1-1) 단어장이 늘 비어 있다. 이야기에서
+   * 고른 낱말을 앱이 기억해뒀다가 라우트가 넘겨준다. **서버가 하나라도 주면
+   * 서버 것이 이긴다.**
+   */
+  fallbackWords?: readonly WordEntry[];
 }
 
 /**
@@ -48,13 +56,18 @@ export interface WordbookScreenProps {
  *
  * wordbook 은 child 를 모른다 — 어느 아이인지는 라우트가 넘긴다.
  */
-export function WordbookScreen({ childId, childName }: WordbookScreenProps): React.JSX.Element {
+export function WordbookScreen({
+  childId,
+  childName,
+  fallbackWords,
+}: WordbookScreenProps): React.JSX.Element {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('전체');
   const { data, isLoading, isError } = useWords(childId);
   const toggleSaved = useToggleWordSaved(childId);
 
-  const words = data ?? [];
+  const serverWords = data ?? [];
+  const words = serverWords.length > 0 ? serverWords : (fallbackWords ?? []);
   const groups = groupByStory(words);
   const rows = chunk(words, COLUMNS);
   // 로딩 중에는 빈 상태 문구를 띄우지 않는다 — "저장한 단어가 없어요"가 잠깐

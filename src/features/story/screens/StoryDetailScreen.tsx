@@ -14,6 +14,7 @@ import {
 } from '@/shared/ui';
 
 import { useStories } from '../api/queries';
+import { demoStoryDetail } from '../model/demoContent';
 
 /**
  * 이야기 상세 (Figma 125:236).
@@ -24,6 +25,7 @@ import { useStories } from '../api/queries';
 export function StoryDetailScreen(): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const detail = demoStoryDetail();
   const { data, isLoading } = useStories('전체');
   const summaryFromList = data?.find((item) => item.id === id);
   const tintIndex = data?.findIndex((item) => item.id === id) ?? 0;
@@ -116,11 +118,33 @@ export function StoryDetailScreen(): React.JSX.Element {
               <Text variant="word">{title}</Text>
 
               {/*
-                디자인에는 줄거리·역할 안내·등장 인물 블록이 더 있다.
-                **`GET /stories/{id}` 상세가 명세에 없어서 채울 값이 없다.**
-                빈 카드를 남기면 로딩이 안 끝난 것처럼 보이므로 통째로 뺐다.
-                상세 엔드포인트가 생기면 이 자리에 되살린다.
+                줄거리·역할 안내·등장 인물. **`GET /stories/{id}` 가 명세에 없어**
+                서버에서 받아올 데가 없어서 앱이 채운다 (`demoContent`).
+                상세 엔드포인트가 생기면 그 값으로 갈아끼우고 표는 지운다.
               */}
+              <View style={styles.blocks}>
+                <View style={styles.block}>
+                  <Text variant="captionStrong">줄거리</Text>
+                  <Text variant="footnote" color="textStrong">
+                    {detail.summary}
+                  </Text>
+                </View>
+                <View style={styles.block}>
+                  <Text variant="captionStrong">이런 역할이야</Text>
+                  <Text variant="footnote" color="textStrong">
+                    {detail.role}
+                  </Text>
+                </View>
+                <View style={styles.block}>
+                  <Text variant="captionStrong">등장 인물</Text>
+                  <View style={styles.tags}>
+                    {detail.characters.map((name) => (
+                      <Chip key={name} label={name} size="sm" />
+                    ))}
+                  </View>
+                </View>
+              </View>
+
               <View style={styles.meta}>
                 <MetaRow label="예상 시간" value={`약 ${minutes}분`} />
               </View>
@@ -202,6 +226,12 @@ const styles = StyleSheet.create({
     padding: 14, // 디자인 실측
     borderRadius: radius.md,
     backgroundColor: colors.surfaceAccentWarm,
+  },
+  blocks: {
+    gap: spacing.lg,
+  },
+  block: {
+    gap: spacing.sm,
   },
   meta: {
     gap: spacing.xs,

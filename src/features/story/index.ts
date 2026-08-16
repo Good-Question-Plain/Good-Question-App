@@ -42,3 +42,4 @@ export { STORY_CATEGORIES } from './model/types';
 export type { Story, StoryCategory } from './model/types';
 export type { StoryCard } from './model/activity';
 export { useLastStoryStore } from './model/lastStoryStore';
+export { useDemoSessionStore } from './model/demoSessionStore';
