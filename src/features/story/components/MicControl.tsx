@@ -6,12 +6,15 @@ import { colors, motion, radius, spacing, type ColorToken } from '@/shared/theme
 import { MicIcon, PressableScale, Text } from '@/shared/ui';
 
 /**
- * 마이크가 가질 수 있는 상태. 디자인에 별도 가이드 프레임(86:448)이 있다.
+ * 마이크가 가질 수 있는 상태. 가이드 프레임(86:448)이 정의한 **3가지**다 —
+ * 그 프레임의 부제가 "대화 화면에서 사용되는 마이크 버튼의 3가지 상태" 다.
  *
- * `blocked` 만 그 가이드에 없고 이야기 도입 화면(86:410)에만 나온다 —
- * "아직 말할 차례가 아니에요" 는 처리 중(`processing`)과 다른 회색을 쓴다.
+ * **`blocked`("아직 말할 차례가 아니에요")는 없앴다.** 옛 도입 시안(86:410)에만
+ * 있던 상태인데, 그 시안이 `380:342` 로 교체되면서 마이크 자체가 사라졌다.
+ * 읽어주는 동안은 마이크가 **잠긴 게 아니라 없는** 것이다 — 화면이 `isReading`
+ * 으로 판단해 아예 그리지 않는다 (`StoryPlayScreen`).
  */
-export type MicState = 'blocked' | 'ready' | 'listening' | 'processing';
+export type MicState = 'ready' | 'listening' | 'processing';
 
 export interface MicControlProps {
   state: MicState;
@@ -64,8 +67,6 @@ function SolidMic({
       </View>
     );
   }
-
-  if (state === 'blocked') return circle;
 
   return (
     <PressableScale accessibilityRole="button" accessibilityLabel="말하기" onPress={onPress}>
@@ -139,14 +140,12 @@ function ProcessingRing(): React.JSX.Element {
 const LABELS: Record<MicState, { label: string; color: ColorToken }> = {
   // 도입 화면(86:410)의 문구. 디자인은 "아니예요" 지만 맞춤법이 틀렸다 —
   // 아이가 글을 배우는 앱이라 고쳤다.
-  blocked: { label: '아직 말할 차례가 아니에요', color: 'textStrong' },
   ready: { label: '말할 준비 완료', color: 'text' },
   listening: { label: '듣고 있어요', color: 'primaryText' },
   processing: { label: '말한 내용을 정리하고 있어요', color: 'text' },
 };
 
 const SOLID_BACKGROUND: Record<Exclude<MicState, 'listening'>, string> = {
-  blocked: colors.surfaceInactive,
   ready: colors.primaryReady,
   processing: colors.surfaceBusy,
 };

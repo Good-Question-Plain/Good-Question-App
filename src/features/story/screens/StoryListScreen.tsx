@@ -5,8 +5,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { spacing } from '@/shared/theme';
 import { Appear, Chip, EmptyState, Screen, Text } from '@/shared/ui';
 
+import { useStories } from '../api/queries';
 import { StoryCard } from '../components/StoryCard';
-import { MOCK_STORIES, STORY_CATEGORIES, type Story, type StoryCategory } from '../model/types';
+import { STORY_CATEGORIES, type Story, type StoryCategory } from '../model/types';
 
 /** 디자인 실측: 3열, 카드 높이 281, 간격 16. */
 const COLUMNS = 3;
@@ -37,9 +38,16 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
 export function StoryListScreen(): React.JSX.Element {
   const router = useRouter();
   const [category, setCategory] = useState<StoryCategory>('전체');
+  const { data, isError } = useStories(category);
 
-  const stories: readonly Story[] =
-    category === '전체' ? MOCK_STORIES : MOCK_STORIES.filter((story) => story.tag === category);
+  const stories: readonly Story[] = (data ?? []).map<Story>((summary) => ({
+    id: summary.id,
+    title: summary.title,
+    minutes: summary.minutes,
+    // 카드 태그는 첫 주제를 쓴다. 서버는 여러 개를 줄 수 있다.
+    tag: summary.topics[0] ?? '이야기',
+    thumbnailUrl: summary.thumbnailUrl ?? undefined,
+  }));
   const rows = chunk(stories, COLUMNS);
 
   return (
@@ -68,8 +76,12 @@ export function StoryListScreen(): React.JSX.Element {
 
         {stories.length === 0 ? (
           <EmptyState
-            title="아직 이야기가 없어요"
-            description={`'${category}' 이야기는 곧 찾아올 거예요`}
+            title={isError ? '이야기를 불러오지 못했어요' : '아직 이야기가 없어요'}
+            description={
+              isError
+                ? '연결 상태를 확인하고 다시 시도해주세요'
+                : `'${category}' 이야기는 곧 찾아올 거예요`
+            }
           />
         ) : (
           <ScrollView contentContainerStyle={styles.gridScroll}>

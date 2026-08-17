@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { colors, radius, spacing } from '@/shared/theme';
@@ -23,7 +23,7 @@ export function RecommendedStoryCard({
   onPress,
   style,
 }: RecommendedStoryCardProps): React.JSX.Element {
-  const { title, minutes, tag, Icon } = story;
+  const { title, minutes, tag, Icon, thumbnailUrl } = story;
   const { select } = useResponsive();
 
   // 디자인(191/30)은 태블릿 가로 기준이다. 분할 화면처럼 폭이 줄면 썸네일이
@@ -40,7 +40,16 @@ export function RecommendedStoryCard({
       style={[styles.card, { gap }, style]}
     >
       <View style={[styles.thumbnail, { width: thumbnailWidth }]}>
-        <Icon width={ART_SIZE} height={ART_SIZE} />
+        {thumbnailUrl !== undefined ? (
+          <Image
+            source={{ uri: thumbnailUrl }}
+            style={styles.thumbnailImage}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          Icon !== undefined && <Icon width={ART_SIZE} height={ART_SIZE} />
+        )}
       </View>
 
       <View style={styles.info}>
@@ -76,6 +85,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.md,
     backgroundColor: colors.primaryAccent,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   info: {
     // 제목이 길면 썸네일을 밀지 않고 말줄임되도록 남는 폭만 쓴다.

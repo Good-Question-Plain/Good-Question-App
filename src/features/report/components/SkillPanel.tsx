@@ -30,9 +30,12 @@ export function SkillPanel({ title, skills }: SkillPanelProps): React.JSX.Elemen
             {skill.summary}
           </Text>
 
-          <View style={styles.quote}>
-            <Text variant="bodySmall">{skill.quote}</Text>
-          </View>
+          {/* 인용할 발화를 못 찾은 항목은 빈 상자가 남지 않게 통째로 뺀다. */}
+          {skill.quotes.map((quote) => (
+            <View key={quote} style={styles.quote}>
+              <Text variant="bodySmall">{quote}</Text>
+            </View>
+          ))}
 
           <View style={styles.notes}>
             {skill.notes.map((note) => (

@@ -4,9 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { colors, radius, spacing } from '@/shared/theme';
 import { Appear, Button, EmptyState, GuideFaceIcon, Screen, SparkleIcon, Text } from '@/shared/ui';
 
-import { findActivity } from '../model/activity';
-import { findScript } from '../model/script';
-import { findStory } from '../model/types';
+/**
+ * 완료 화면이 보여줄 값은 **앞 화면(다시 말하기)의 `retell` 응답**이 준다.
+ * 다시 받아올 엔드포인트가 없어서 라우트 파라미터로 넘겨받는다.
+ */
 
 /**
  * 이야기 후 활동 완료 (Figma 92:1340).
@@ -16,14 +17,15 @@ import { findStory } from '../model/types';
  */
 export function StoryDoneScreen(): React.JSX.Element {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const story = findStory(id);
-  const script = findScript(id);
-  const activity = findActivity(id);
+  const { title, turns, words } = useLocalSearchParams<{
+    title?: string;
+    turns?: string;
+    words?: string;
+  }>();
 
-  // 대본도 활동도 없는 이야기로 곧장 들어온 경우(오래된 링크, 딥링크). 0번·0개짜리
+  // 활동을 거치지 않고 곧장 들어온 경우(오래된 링크, 딥링크). 0번·0개짜리
   // 축하 화면을 띄우면 하지도 않은 걸 했다고 알리는 셈이라, 그대로 사실을 알린다.
-  if (script === undefined || activity === undefined) {
+  if (turns === undefined || words === undefined) {
     return (
       <Screen>
         <View style={styles.page}>
@@ -39,9 +41,8 @@ export function StoryDoneScreen(): React.JSX.Element {
     );
   }
 
-  // 대화에서 아이가 말한 횟수는 장면 수와 같다(장면마다 한 번 답한다).
-  const turnCount = script.scenes.length;
-  const wordCount = activity.keywords.length;
+  const turnCount = Number(turns);
+  const wordCount = Number(words);
 
   return (
     <Screen>
@@ -60,7 +61,7 @@ export function StoryDoneScreen(): React.JSX.Element {
         </Appear>
 
         <Appear delay={140} style={styles.summary}>
-          <Text variant="heading">{story?.title ?? '오늘의 이야기'}</Text>
+          <Text variant="heading">{title ?? '오늘의 이야기'}</Text>
           <View style={styles.rows}>
             <SummaryRow label="발화 횟수" value={`${turnCount}번`} />
             <SummaryRow label="새로 배운 단어" value={`${wordCount}개`} />

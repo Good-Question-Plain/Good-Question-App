@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { supabase } from '@/shared/api';
 import { colors, radius, spacing } from '@/shared/theme';
 import {
   Appear,
@@ -17,6 +18,7 @@ import {
   WithdrawIcon,
 } from '@/shared/ui';
 
+import { useWithdrawAccount } from '../api/queries';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ParentGateModal } from '../components/ParentGateModal';
 import { ProfileCard } from '../components/ProfileCard';
@@ -36,6 +38,8 @@ export interface MypageChild {
   id: string;
   name: string;
   age: number;
+  /** 직접 올린 프로필 사진. 있으면 이름 첫 글자 대신 사진이 뜬다. */
+  photoUrl?: string | null;
 }
 
 export interface MypageScreenProps {
@@ -63,6 +67,7 @@ export function MypageScreen({
 }: MypageScreenProps): React.JSX.Element {
   const router = useRouter();
   const [openModal, setOpenModal] = useState<OpenModal>(null);
+  const withdraw = useWithdrawAccount();
   const [gatedTarget, setGatedTarget] = useState<GatedTarget | null>(null);
 
   const close = (): void => setOpenModal(null);
@@ -117,9 +122,17 @@ export function MypageScreen({
                   <ProfileCard
                     key={item.child.id}
                     name={item.child.name}
-                    caption={`${item.child.age}세`}
+                    // 사진을 올린 아이는 이름 첫 글자 대신 그 사진이 뜬다.
+                    photoUrl={item.child.photoUrl}
+                    // 나이를 모를 수 있다 — 아이를 만들 때 생년을 보낼 자리가
+                    // 명세에 없어서 서버가 0 을 줄 수 있다. "0세"보다 빈 칸이 낫다.
+                    caption={item.child.age > 0 ? `${item.child.age}세` : ''}
                     tintIndex={item.index}
-                    onEdit={() => router.push('/child/create')}
+                    // **`id` 를 반드시 넘긴다.** 안 넘기면 등록 화면이 열려서
+                    // 고치려던 아이 대신 새 아이가 하나 더 만들어진다.
+                    onEdit={() =>
+                      router.push({ pathname: '/child/create', params: { id: item.child.id } })
+                    }
                     style={styles.childCell}
                   />
                 ) : (
@@ -198,23 +211,28 @@ export function MypageScreen({
 
       <ConfirmModal
         visible={openModal === 'logout'}
-        title="로그아웃 할까요?"
-        description="다시 로그인하면 이어서 사용할 수 있어요"
+        title="로그아웃 하시겠어요?"
+        description="다시 로그인해야 서비스를 이용할 수 있어요"
         confirmLabel="로그아웃"
         onConfirm={() => {
           close();
-          // TODO: 토큰 삭제 후 로그인으로
-          router.replace('/');
+          // 세션을 지우면 AuthGate 가 로그인 화면으로 되돌린다. 여기서 직접
+          // 이동하지 않는 이유는, 저장된 세션이 남은 채로 화면만 옮기면
+          // 딥링크로 다시 들어올 수 있기 때문이다.
+          // signOut 은 실패해도 로컬 세션은 지워지므로 결과를 기다리지 않는다.
+          void supabase.auth.signOut();
         }}
         onCancel={close}
       />
 
       <WithdrawModal
         visible={openModal === 'withdraw'}
+        loading={withdraw.isPending}
         onConfirm={() => {
-          close();
-          // TODO: 회원탈퇴 API (soft delete)
-          router.replace('/');
+          if (withdraw.isPending) return;
+          // 성공하면 세션이 사라지고 AuthGate 가 로그인 화면으로 되돌린다.
+          // 모달은 그때까지 열어둔다 — 먼저 닫으면 누른 뒤 아무 반응이 없다.
+          withdraw.mutate(undefined, { onSuccess: close });
         }}
         onCancel={close}
       />

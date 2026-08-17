@@ -12,9 +12,10 @@ import {
   Text,
 } from '@/shared/ui';
 
+import { useMainPage } from '../api/queries';
 import { ContinueCard } from '../components/ContinueCard';
 import { RecommendedStoryCard } from '../components/RecommendedStoryCard';
-import { findStory, MOCK_PROGRESS, MOCK_STORIES } from '../model/types';
+import type { Story } from '../model/types';
 
 /** 디자인 실측: 추천 이야기는 세 편까지 보인다. 더 넣으면 카드 높이가 무너진다. */
 const RECOMMENDATION_COUNT = 3;
@@ -22,7 +23,11 @@ const RECOMMENDATION_COUNT = 3;
 export interface HomeScreenProps {
   /** 지금 쓰는 아이 이름. 인사말과 전환 알약에 쓴다. */
   childName: string;
+  /** 홈 데이터는 아이별이다 (`GET /main?child_id=`). */
+  childId: string;
   /** 전환 알약을 펼쳤을 때 고를 수 있는 아이들 */
+  /** 지금 보고 있는 아이가 올린 사진. 알약에도 이름 대신 사진이 뜬다. */
+  childPhotoUrl?: string | null;
   childOptions: readonly ChildSwitcherOption[];
   onSelectChild: (id: string) => void;
 }
@@ -38,6 +43,8 @@ export interface HomeScreenProps {
  */
 export function HomeScreen({
   childName,
+  childPhotoUrl,
+  childId,
   childOptions,
   onSelectChild,
 }: HomeScreenProps): React.JSX.Element {
@@ -51,11 +58,30 @@ export function HomeScreen({
     expanded: spacing['5xl'],
   });
 
-  const continueStory = findStory(MOCK_PROGRESS.storyId);
-  const recommended = MOCK_STORIES.filter((story) => story.id !== continueStory?.id).slice(
-    0,
-    RECOMMENDATION_COUNT,
-  );
+  const { data } = useMainPage(childId);
+
+  // 이어하기 카드는 서버가 진행률까지 준다. 없으면 null 이다(첫 실행).
+  const continueStory: Story | undefined =
+    data?.continueStory == null
+      ? undefined
+      : {
+          id: data.continueStory.storyId,
+          title: data.continueStory.title,
+          minutes: 0,
+          tag: '',
+          thumbnailUrl: data.continueStory.thumbnailUrl ?? undefined,
+        };
+  const continueRatio = data?.continueStory?.ratio ?? 0;
+
+  const recommended: Story[] = (data?.recommended ?? [])
+    .map((summary) => ({
+      id: summary.id,
+      title: summary.title,
+      minutes: summary.minutes,
+      tag: summary.topics[0] ?? '이야기',
+      thumbnailUrl: summary.thumbnailUrl ?? undefined,
+    }))
+    .slice(0, RECOMMENDATION_COUNT);
 
   const openStory = (id: string): void => {
     router.push({ pathname: '/story/[id]', params: { id } });
@@ -74,7 +100,12 @@ export function HomeScreen({
               오늘은 어떤 이야기를 만나볼까?
             </Text>
           </View>
-          <ChildSwitcher name={childName} options={childOptions} onSelect={onSelectChild} />
+          <ChildSwitcher
+            name={childName}
+            photoUrl={childPhotoUrl}
+            options={childOptions}
+            onSelect={onSelectChild}
+          />
         </Appear>
 
         <View style={[styles.body, { gap: columnGap }]}>
@@ -91,7 +122,7 @@ export function HomeScreen({
             <Appear delay={40} style={[styles.column, styles.continueColumn]}>
               <ContinueCard
                 story={continueStory}
-                ratio={MOCK_PROGRESS.ratio}
+                ratio={continueRatio}
                 onPress={() => openStory(continueStory.id)}
               />
             </Appear>

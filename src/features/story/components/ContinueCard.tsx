@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useResponsive } from '@/shared/hooks/useResponsive';
 import { colors, radius, spacing } from '@/shared/theme';
@@ -26,7 +26,7 @@ export function ContinueCard({
   onPress,
   style,
 }: ContinueCardProps): React.JSX.Element {
-  const { title, Icon } = story;
+  const { title, Icon, thumbnailUrl } = story;
   const { select } = useResponsive();
   const percent = Math.round(clamp(ratio) * 100);
 
@@ -35,7 +35,17 @@ export function ContinueCard({
   return (
     <View style={[styles.card, style]}>
       <View style={styles.thumbnail}>
-        <Icon width={artSize} height={artSize} />
+        {/* 서버 표지가 있으면 그걸, 없으면 번들 그림으로 떨어진다. */}
+        {thumbnailUrl !== undefined ? (
+          <Image
+            source={{ uri: thumbnailUrl }}
+            style={styles.thumbnailImage}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          Icon !== undefined && <Icon width={artSize} height={artSize} />
+        )}
       </View>
 
       <Text variant="word" numberOfLines={2}>
@@ -78,6 +88,10 @@ function clamp(ratio: number): number {
 const ART_SIZE = 315;
 
 const styles = StyleSheet.create({
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
   card: {
     flex: 1,
     gap: 15, // 디자인 실측

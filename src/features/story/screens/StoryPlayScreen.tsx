@@ -2,7 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
-import { colors, hitSize, hitSlopFor, radius, spacing } from '@/shared/theme';
+import { toApiError } from '@/shared/api';
+import { colors, hitSlopFor, radius, spacing } from '@/shared/theme';
 import {
   Appear,
   ArrowLeftIcon,
@@ -13,26 +14,48 @@ import {
   Text,
 } from '@/shared/ui';
 
+import type { SceneVocabulary, SessionStep } from '../api/progressApi';
+import {
+  useCompleteStep,
+  useEnterStep,
+  useSelectSceneVocabulary,
+  useSpeak,
+  useStartStorySession,
+} from '../api/queries';
 import { MicControl, type MicState } from '../components/MicControl';
 import { NarrationPanel } from '../components/NarrationPanel';
 import { ScenePanel } from '../components/ScenePanel';
+import { SceneWordPicker } from '../components/SceneWordPicker';
 import { CharacterBubble, ChildBubble, ListeningHint } from '../components/SpeechBubble';
-import { findScript } from '../model/script';
-import { findStory } from '../model/types';
+import { useChildRecorder } from '../hooks/useChildRecorder';
+import { useDictation } from '../hooks/useDictation';
+import { useNarrationSpeech } from '../hooks/useNarrationSpeech';
+import { demoMission, demoSceneVocabularies, demoSpeakResult } from '../model/demoContent';
+import { useDemoSessionStore } from '../model/demoSessionStore';
+import { useLastStoryStore } from '../model/lastStoryStore';
 
 /**
- * 장면 나레이션을 읽어주는 데 걸린다고 가정하는 시간.
+ * 읽어주기가 **시작조차 못 했는지** 판단하는 시간.
  *
- * TODO: TTS 를 붙이면 이 타이머 대신 재생 완료 콜백에서 아이 차례로 넘긴다.
+ * 기기에 한국어 음성이 없거나 엔진이 죽어 있으면 `onDone` 도 `onError` 도 안 오는
+ * 경우가 있다. 읽어주는 동안에는 화면에 누를 것이 하나도 없으므로(디자인 380:342),
+ * 그대로 두면 **아이가 아무 버튼도 없는 화면에 갇힌다.**
+ *
+ * 이 시간 뒤에도 소리가 시작되지 않았으면 읽기를 포기하고 다음으로 넘긴다.
  */
-const NARRATION_MS = 2500;
+const SPEECH_START_TIMEOUT_MS = 3000;
 
 /**
- * 아이 말을 받아 적는 데 걸린다고 가정하는 시간.
+ * 읽어주기가 시작은 했는데 **끝났다는 신호가 안 올 때**의 최후 상한.
  *
- * TODO: STT 를 붙이면 인식 완료 콜백으로 바꾼다.
+ * 글자 수에 비례해 잡는다 — 짧은 대사에 30초를 기다리면 멈춘 것처럼 보이고,
+ * 긴 나레이션에 고정 몇 초를 주면 읽는 도중에 버튼이 튀어나온다.
+ * (예전에 2.5초 고정이었는데, 15초짜리 나레이션 중간에 넘어가 버렸다.)
  */
-const TRANSCRIBE_MS = 900;
+function speechDeadlineMs(text: string): number {
+  // 한국어 TTS 가 대략 초당 5~6자다. 넉넉히 잡고 시작 지연까지 더한다.
+  return 8000 + text.length * 400;
+}
 
 /**
  * 배경 그림 위에 글을 얹으려면 그림을 죽여야 한다. 디자인 실측(40%).
@@ -40,56 +63,136 @@ const TRANSCRIBE_MS = 900;
  */
 const BACKDROP_OPACITY = 0.4;
 
-/**
- * TODO: 장면 배경은 서버가 장면마다 내려줄 값이다. 지금은 디자인에 들어 있던
- * 한옥 마당 그림 하나를 모든 장면에 쓴다.
- */
-const SCENE_BACKGROUND = require('@assets/scenes/hanok-yard.jpg') as number;
+/** 서버가 장면 그림을 안 줄 때 쓰는 기본 배경 (디자인에 들어 있던 한옥 마당). */
+const FALLBACK_BACKGROUND = require('@assets/scenes/hanok-yard.jpg') as number;
+
+export interface StoryPlayScreenProps {
+  childId: string;
+  /** 뒤로 버튼에 쓸 이야기 제목. 세션 응답에는 제목이 없어 라우트가 넘긴다. */
+  storyTitle?: string;
+}
 
 /**
- * 이야기 전개 및 대화 (Figma 86:410 / 161:1158 / 216:277).
+ * 이야기 전개 및 대화 (Figma 380:342 / 161:1158 / 380:281).
  *
  * 여러 시안이 같은 화면의 서로 다른 순간이라 한 화면으로 합쳤다. 마이크 상태는
  * 디자인의 가이드 프레임(86:448)이 정의한 네 가지를 그대로 따른다.
  *
- * 나레이션 재생(`blocked`) → 아이 차례(`ready`) → 녹음(`listening`)
- * → 받아쓰기(`processing`) → 답변 확정 후 다시 `ready`, 보내기 활성.
+ * **장면은 서버가 굴린다.** `POST /progress/{story_id}/start` 로 세션을 열고,
+ * 나레이션은 `complete` 로, 대화는 `speak` 로 넘어간다. 다음 장면으로 갈지도
+ * 서버가 정한다(`scene_ended`) — 앱이 세지 않는다.
  *
- * 미션이 있는 장면이면 줄거리 아래에 미션 패널이 하나 더 붙는다 (216:277).
+ * **미션은 `kind` 가 아니다.** 미션이 있는 장면도 `kind` 는 `dialogue` 이고,
+ * 아이가 말한 뒤 `speak` 응답에 `mission` 이 붙어야 미션 패널이 나온다.
  */
-export function StoryPlayScreen(): React.JSX.Element {
+export function StoryPlayScreen({ childId, storyTitle }: StoryPlayScreenProps): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const story = findStory(id);
-  const script = findScript(id);
+  const storyId = id ?? '';
 
-  const [sceneIndex, setSceneIndex] = useState(0);
-  const [micState, setMicState] = useState<MicState>('blocked');
+  const [step, setStep] = useState<SessionStep | null>(null);
+  /**
+   * 지금 읽어주는 중인지.
+   *
+   * **마이크 상태와 분리해서 들고 있다.** 예전에는 `micState = 'blocked'` 하나로
+   * "읽어주는 중"까지 표현했는데, 디자인의 마이크 가이드(86:448)는 상태를 **3개**
+   * (준비 완료 · 듣고 있어요 · 정리 중)만 정의하고 나레이션 시안(380:342)에는
+   * 마이크가 아예 없다. 읽어주는 동안은 마이크가 존재하지 않는 시간이라
+   * 마이크의 한 상태로 표현하면 안 된다.
+   */
+  const [isReading, setIsReading] = useState(true);
+  const [micState, setMicState] = useState<MicState>('ready');
   const [reply, setReply] = useState<string | null>(null);
+  /** 등장인물의 답. `speak` 응답으로 갱신되며, 장면이 끝나면 마무리 대사가 된다. */
+  const [characterLine, setCharacterLine] = useState<string | null>(null);
+  const [sceneEnded, setSceneEnded] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  /**
+   * 단어 목록을 펼쳤는지. 시안은 접힌 상태가 기본이다.
+   *
+   * 장면이 바뀌면 단어도 바뀌므로 다시 접는다 — 펼친 채로 두면 이전 장면의
+   * 길이만큼 그림을 가린 채 새 단어가 들어온다.
+   */
+  const [wordsExpanded, setWordsExpanded] = useState(false);
 
-  const scene = script?.scenes[sceneIndex];
+  const start = useStartStorySession(childId);
+  const enterStep = useEnterStep(childId);
+  const completeStep = useCompleteStep(childId);
+  const speak = useSpeak(childId);
+  const selectWord = useSelectSceneVocabulary(childId);
+  const recorder = useChildRecorder();
+  const speech = useNarrationSpeech();
+  const dictation = useDictation();
 
-  // 나레이션이 끝나면 아이 차례로 넘어간다. 장면이 바뀌면 `handleSend` 가
-  // 다시 'blocked' 로 돌려놓으므로 여기서 타이머가 새로 걸린다.
+  const rememberStory = useLastStoryStore((state) => state.rememberStory);
+  const startDemoSession = useDemoSessionStore((state) => state.start);
+  const addUtterance = useDemoSessionStore((state) => state.addUtterance);
+  const toggleDemoWord = useDemoSessionStore((state) => state.toggleWord);
+  const demoWords = useDemoSessionStore((state) => state.words);
+  /** 임시 대화에서 몇 번째 주고받는 중인지. 서버가 받아주면 서버의 `turn` 을 쓴다. */
+  const [demoTurn, setDemoTurn] = useState(0);
+
+  // 화면에 들어오면 세션을 연다. 같은 이야기를 이미 보던 중이면 이어하기가 된다.
   useEffect(() => {
-    if (micState !== 'blocked' || scene === undefined) return;
+    if (childId.length === 0 || storyId.length === 0) return;
 
-    const timer = setTimeout(() => setMicState('ready'), NARRATION_MS);
+    // 리포트가 "어느 이야기인지" 를 여기서만 알 수 있다 (`lastStoryStore` 주석 참고).
+    rememberStory(storyId);
+    startDemoSession(storyId, storyTitle ?? '');
 
-    return () => clearTimeout(timer);
-  }, [micState, scene]);
+    start.mutate(storyId, {
+      onSuccess: (session) => setStep(session.step),
+      onError: (error) => {
+        const apiError = toApiError(error);
+        // 409 = 다른 이야기가 진행 중. 아이당 세션은 하나뿐이다.
+        setFailure(
+          apiError.kind === 'conflict'
+            ? '읽던 다른 이야기가 있어요. 그 이야기를 먼저 끝내주세요.'
+            : '이야기를 열지 못했어요. 잠시 후 다시 시도해주세요.',
+        );
+      },
+    });
+    // 세션 열기는 화면당 한 번이다. mutate 는 매 렌더 새 참조라 의존성에 넣지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childId, storyId]);
 
-  // 녹음을 멈추면 받아쓴 결과가 도착한다.
+  /**
+   * 장면이 바뀌면 읽어주고, 다 읽으면 아이 차례로 넘긴다.
+   *
+   * **TTS 는 앱이 맡는다** — 서버는 글만 준다. 읽어주는 동안 화면에는 누를 것이
+   * 하나도 없으므로(디자인 380:342), 읽기가 조용히 실패하면 아이가 갇힌다.
+   * 그래서 안전장치를 **두 겹**으로 건다.
+   *
+   * 1. 소리가 시작조차 안 되면 (`SPEECH_START_TIMEOUT_MS`)
+   * 2. 시작은 했는데 끝났다는 신호가 안 오면 (`speechDeadlineMs`)
+   */
   useEffect(() => {
-    if (micState !== 'processing' || scene === undefined) return;
+    if (step === null || !isReading) return;
 
-    const timer = setTimeout(() => {
-      setReply(scene.sampleReply);
-      setMicState('ready');
-    }, TRANSCRIBE_MS);
+    // 대화 장면이면 등장인물의 첫 대사를, 아니면 줄거리를 읽는다.
+    const line = step.kind === 'narration' ? step.sceneDescription : (step.characterOpening ?? '');
 
+    speech.speak(line, () => setIsReading(false));
+
+    const deadline = setTimeout(() => setIsReading(false), speechDeadlineMs(line));
+
+    return () => clearTimeout(deadline);
+    // speech 는 매 렌더 같은 참조라 의존성에 넣으면 무한 재생된다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, isReading]);
+
+  /**
+   * 읽어주기가 **시작조차 못 한** 경우를 건져낸다.
+   *
+   * 소리가 나기 시작하면 이 효과가 다시 돌면서 타이머를 걷어간다 — 그러면 끝까지
+   * 기다린다. 여기서 성급하게 넘기면 읽는 도중에 버튼이 튀어나온다.
+   */
+  useEffect(() => {
+    if (!isReading || speech.isSpeaking) return;
+
+    const timer = setTimeout(() => setIsReading(false), SPEECH_START_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [micState, scene]);
+  }, [isReading, speech.isSpeaking]);
 
   const backButton = (
     <PressableScale
@@ -102,48 +205,224 @@ export function StoryPlayScreen(): React.JSX.Element {
     >
       <ArrowLeftIcon width={26} height={15} color={colors.text} />
       <Text variant="labelSmall" numberOfLines={1}>
-        {story?.title ?? '이야기'}
+        {storyTitle ?? '이야기'}
       </Text>
     </PressableScale>
   );
 
-  // 대본이 아직 없는 이야기로 들어온 경우. 목데이터에는 한 편만 준비돼 있다.
-  if (script === undefined || scene === undefined) {
+  if (failure !== null || step === null) {
     return (
       <Screen>
         <View style={styles.page}>
           {backButton}
           <EmptyState
-            title="아직 준비 중인 이야기예요"
-            description="곧 이 이야기로도 대화할 수 있어요"
+            title={failure ?? '이야기를 준비하고 있어요'}
+            description={failure === null ? '잠시만 기다려주세요' : undefined}
           />
         </View>
       </Screen>
     );
   }
 
-  const total = script.scenes.length;
-  const isLastScene = sceneIndex === total - 1;
+  const total = step.sceneCount;
+  const current = step.stepIndex;
+  const isNarration = step.kind === 'narration';
+  const isLastScene = current >= total;
 
-  const handleSend = (): void => {
+  /**
+   * 아이가 말할 수 있는 장면인지 (= 마이크를 띄울지).
+   *
+   * 원래는 `kind === 'dialogue'` 하나면 된다. 그런데 **서버가 등장인물이 말을 거는
+   * 장면까지 전부 `narration` 으로 준다**(08-17 확인). 그 장면에 `speak` 를 보내면
+   * 400 "이 장면에서는 말할 수 없습니다" 로 막힌다.
+   *
+   * 시안(161:1158)은 등장인물이 말을 걸면 마이크가 있는 화면이므로, **등장인물이
+   * 있으면 말할 수 있는 장면으로 본다.** 서버가 `kind: dialogue` 를 주기 시작해도
+   * 이 조건은 그대로 참이라 고칠 것이 없다.
+   */
+  const canSpeak = step.characterName !== null;
+
+  /**
+   * 아이 말을 **서버로 보낼 수 있는** 장면인지.
+   *
+   * 여기가 갈리는 자리다. 서버가 받아주면 서버 STT 가 `child_text` 를 주고 등장인물
+   * 대사까지 이어진다(명세 "아이 발화 전송"). 아직 안 받아주므로 그때는 **앱에서
+   * 받아쓰기만 해서 말풍선에 보여준다** — 리포트·단어장에는 안 쌓인다.
+   *
+   * **서버가 대화 씬을 주기 시작하면 이 임시 경로는 저절로 안 쓰인다.**
+   */
+  const serverAcceptsSpeech = !isNarration;
+
+  /**
+   * 이 장면에서 고를 수 있는 낱말.
+   *
+   * **서버 값이 있으면 서버가 이긴다.** 지금은 모든 장면이 빈 배열이라(인수인계 1-1)
+   * 목록 자체가 안 뜨므로, 비어 있을 때만 임시 낱말을 쓴다 (`demoContent`).
+   */
+  const usesDemoWords = step.vocabularies.length === 0;
+  const sceneWords = usesDemoWords
+    ? demoSceneVocabularies(current, total).map((word) => ({
+        ...word,
+        selected: demoWords.some((picked) => picked.id === word.id),
+      }))
+    : step.vocabularies;
+
+  /** 미션도 마찬가지다. 서버가 주기 시작하면 그쪽이 쓰인다. */
+  const sceneMission = step.mission ?? (serverAcceptsSpeech ? null : demoMission(current));
+
+  /** 다음 장면으로. 마지막이면 이야기 후 활동으로 넘어간다. */
+  const goNextScene = (): void => {
     if (isLastScene) {
-      router.replace({ pathname: '/story/[id]/activity', params: { id } });
+      router.replace({ pathname: '/story/[id]/activity', params: { id: storyId } });
       return;
     }
-    setSceneIndex((index) => index + 1);
-    setMicState('blocked');
-    setReply(null);
+
+    enterStep.mutate(
+      { storyId, stepIndex: current + 1 },
+      {
+        onSuccess: (next) => {
+          setStep(next);
+          // 새 장면은 읽어주기부터 시작한다. 마이크는 다 읽은 뒤에야 나타난다.
+          setIsReading(true);
+          setMicState('ready');
+          // 앞 장면에서 받아쓴 말이 남아 있으면 새 장면의 아이 말풍선으로 보인다.
+          dictation.reset();
+          setDemoTurn(0);
+          setReply(null);
+          setCharacterLine(null);
+          setSceneEnded(false);
+          // 새 장면의 단어는 접힌 채로 시작한다.
+          setWordsExpanded(false);
+        },
+      },
+    );
   };
 
-  /** 마이크는 아이 차례일 때 녹음을 시작하고, 녹음 중이면 멈춘다. */
+  /**
+   * "보내기" — 나레이션이면 완료 처리, 대화면 장면이 끝난 뒤에만 넘어간다.
+   */
+  const handleSend = (): void => {
+    if (isNarration) {
+      completeStep.mutate(
+        { storyId, stepIndex: current },
+        {
+          onSuccess: (progress) => {
+            if (progress.completed) {
+              router.replace({ pathname: '/story/[id]/activity', params: { id: storyId } });
+              return;
+            }
+            goNextScene();
+          },
+        },
+      );
+      return;
+    }
+
+    goNextScene();
+  };
+
+  /** 마이크는 아이 차례일 때 듣기 시작하고, 듣는 중이면 멈춘다. */
   const handleMicPress = (): void => {
+    // 장면이 끝난 뒤에는 서버가 발화를 받지 않는다("이 장면에서는 말할 수 없습니다").
+    // 눌러도 400 만 받고 아이에게는 아무 일도 안 일어난 것처럼 보이므로 여기서 막는다.
+    if (sceneEnded) return;
+
     if (micState === 'ready') {
+      // 등장인물의 대답을 읽어주는 중이면 멈춘다. 아이 목소리와 겹쳐 들어가면 안 된다.
+      speech.stop();
       setReply(null);
       setMicState('listening');
+
+      // 서버가 안 받아주는 장면에서는 앱이 직접 받아쓴다.
+      if (serverAcceptsSpeech) void recorder.start();
+      else void dictation.start();
       return;
     }
-    if (micState === 'listening') setMicState('processing');
+
+    if (micState !== 'listening') return;
+
+    if (!serverAcceptsSpeech) {
+      // 받아쓴 글은 `dictation.text` 로 계속 흘러들어와 말풍선에 그려진다.
+      // 마지막 문장이 확정되기까지 잠깐 걸리므로 여기서 복사해두지 않는다.
+      dictation.stop();
+      setMicState('ready');
+
+      // 서버가 이 장면의 발화를 안 받아주므로 등장인물의 대답도 앱이 만든다
+      // (`demoContent` 참고). 아이 말에 아무 반응이 없으면 대화가 아니게 된다.
+      const nextTurn = demoTurn + 1;
+      const result = demoSpeakResult(current, nextTurn, dictation.text);
+
+      setDemoTurn(nextTurn);
+      addUtterance();
+      setCharacterLine(result.characterLine);
+      setSceneEnded(result.sceneEnded);
+      setStep((prev) => (prev === null ? prev : { ...prev, mission: result.mission }));
+      if (result.characterLine !== null) speech.speak(result.characterLine);
+      return;
+    }
+
+    setMicState('processing');
+    void (async () => {
+      const audio = await recorder.stop();
+      if (audio === null) {
+        setMicState('ready');
+        return;
+      }
+
+      speak.mutate(
+        { storyId, stepIndex: current, audio },
+        {
+          onSuccess: (result) => {
+            setReply(result.childText.length > 0 ? result.childText : null);
+            setCharacterLine(result.characterLine);
+            // 등장인물의 대답도 읽어준다. 아이가 글을 못 읽어도 대화가 이어진다.
+            if (result.characterLine !== null) speech.speak(result.characterLine);
+            setSceneEnded(result.sceneEnded);
+            // 미션은 대화가 진행돼야 나온다. 응답에 붙어 오면 패널이 생긴다.
+            setStep((prev) =>
+              prev === null ? prev : { ...prev, mission: result.mission, turn: result.turn },
+            );
+            setMicState('ready');
+          },
+          onError: () => setMicState('ready'),
+        },
+      );
+    })();
   };
+
+  const handleToggleWord = (word: SceneVocabulary): void => {
+    // 임시 낱말은 서버에 저장할 id 가 없다. 화면 표시와 단어장 기록만 앱이 맡는다.
+    if (usesDemoWords) {
+      toggleDemoWord({
+        id: word.id,
+        word: word.word,
+        definition: word.definition,
+        example: word.exampleSentence,
+      });
+      return;
+    }
+
+    selectWord.mutate(
+      { storyId, stepIndex: current, sceneVocabularyId: word.id, selected: !word.selected },
+      {
+        onSuccess: (words) =>
+          setStep((prev) => (prev === null ? prev : { ...prev, vocabularies: words })),
+      },
+    );
+  };
+
+  // 대화 장면은 서버가 끝났다고 해야 넘어갈 수 있다. 나레이션은 다 읽으면 바로다.
+  // 임시 경로(서버가 안 받아주는 대화 장면)는 나레이션과 같이 취급한다 — 서버가
+  // 끝을 알려주지 않으므로 여기서 막으면 아이가 장면에 갇힌다.
+  const canSend = isNarration ? !isReading : sceneEnded;
+
+  /**
+   * 아이 말풍선에 넣을 글.
+   *
+   * 서버가 받아주는 장면이면 서버 STT 결과(`reply`), 아니면 앱이 받아쓴 글이다.
+   */
+  const dictated = dictation.text.trim();
+  const childText = serverAcceptsSpeech ? reply : dictated.length > 0 ? dictated : null;
 
   return (
     <Screen padded={false} maxContentWidth={null}>
@@ -152,73 +431,112 @@ export function StoryPlayScreen(): React.JSX.Element {
           {backButton}
           <View style={styles.progress}>
             <Text variant="captionSmallStrong" color="textStrong">
-              {sceneIndex + 1}/{total}
+              {current}/{total}
             </Text>
             <View
               accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: total, now: sceneIndex + 1 }}
+              accessibilityValue={{ min: 0, max: total, now: current }}
               style={styles.progressTrack}
             >
-              <View
-                style={[styles.progressFill, { width: `${((sceneIndex + 1) / total) * 100}%` }]}
-              />
+              <View style={[styles.progressFill, { width: `${(current / total) * 100}%` }]} />
             </View>
           </View>
         </View>
 
         <View style={styles.body}>
           {/* 왼쪽: 줄거리. 장면이 바뀌면 새로 나타나야 아이가 "넘어갔다"를 안다. */}
-          <Appear key={sceneIndex} style={styles.narrationColumn}>
+          <Appear key={current} style={styles.narrationColumn}>
             <NarrationPanel
-              badge={scene.mission === undefined ? '이야기 줄거리' : '이야기 상황'}
-              text={scene.narration}
-              onReplay={() => {
-                // TODO: TTS 재생
-              }}
+              badge={sceneMission === null ? '이야기 줄거리' : '이야기 상황'}
+              text={step.sceneDescription}
+              // 읽는 도중에 누르면 원래 재생이 `stop()` 으로 끊겨 완료 콜백이 오지
+              // 않는다. 다시 듣기도 끝나면 같은 신호를 줘야 버튼이 나타난다.
+              onReplay={() => speech.speak(step.sceneDescription, () => setIsReading(false))}
             />
           </Appear>
 
           {/* 오른쪽: 배경 그림 위에 대화와 마이크가 얹힌다. */}
           <View style={styles.sceneColumn}>
             <Image
-              source={SCENE_BACKGROUND}
+              // `imageUrl` 은 `toRemoteImageUri` 를 통과한 값이라, 받아올 수 없는
+              // 객체 키가 오면 여기서 null 이 되어 번들 그림으로 떨어진다.
+              source={step.imageUrl === null ? FALLBACK_BACKGROUND : { uri: step.imageUrl }}
               resizeMode="cover"
               style={styles.backdrop}
               accessibilityIgnoresInvertColors
             />
 
-            {micState !== 'blocked' && (
+            {/* 단어 고르기는 그림 오른쪽 위에 겹친다 (디자인 실측: 오른쪽 19 · 위 11). */}
+            <View style={styles.wordPicker}>
+              <SceneWordPicker
+                words={sceneWords}
+                onToggle={handleToggleWord}
+                expanded={wordsExpanded}
+                onToggleExpanded={() => setWordsExpanded((prev) => !prev)}
+                disabled={selectWord.isPending}
+              />
+            </View>
+
+            {/* 말풍선은 **읽어주는 동안에도** 보인다 (시안 161:1158). 소리만 나고
+                글이 없으면 아이가 무슨 말인지 따라갈 수가 없다. */}
+            {step.characterName !== null && (
               <View style={styles.chat}>
-                <CharacterBubble speaker={scene.question.speaker} text={scene.question.text} />
-                {micState === 'listening' && <ListeningHint />}
-                {reply !== null && <ChildBubble text={reply} />}
+                <CharacterBubble
+                  speaker={step.characterName}
+                  text={characterLine ?? step.characterOpening ?? ''}
+                />
+                {micState === 'listening' && !isReading && <ListeningHint />}
+                {/* 말하는 대로 글자가 늘어난다 — 아이가 자기 말이 들어가고 있는 걸
+                    봐야 한다. 서버가 받아주는 장면이면 서버 STT 결과(`reply`)다. */}
+                {childText !== null && <ChildBubble text={childText} />}
               </View>
             )}
 
             {/* 미션과 마이크는 한 덩어리로 아래에 붙는다 (디자인 실측: 바닥에서 23). */}
             <View style={styles.bottomStack}>
-              {scene.mission !== undefined && (
-                <ScenePanel badge="미션" text={scene.mission} align="center" />
+              {sceneMission !== null && (
+                <ScenePanel badge="미션" text={sceneMission.condition} align="center" />
               )}
 
               <View style={styles.micArea}>
-                <MicControl state={micState} onPress={handleMicPress} />
+                {/*
+                  읽어주는 동안에는 마이크도 보내기도 없다 (나레이션 시안 380:342).
+                  **"화면에 뭔가 나타나면 내 차례"** 가 이 화면의 유일한 신호다 —
+                  회색 마이크를 계속 띄워두면 언제가 자기 차례인지 알 수가 없다.
 
-                {/* 보내기는 아이 차례에만 나오지만(디자인 380:342 엔 없다) 자리는 늘 비워둔다.
-                    버튼이 생겼다 사라지면 그 위의 마이크가 손가락 밑에서 위아래로 움직인다. */}
+                  마이크는 **등장인물이 말을 거는 장면**에만 있다(`canSpeak`).
+                  줄거리만 흐르는 장면에는 아이가 대답할 상대가 없어 보내기만 나온다.
+                */}
+                {!isReading && canSpeak && <MicControl state={micState} onPress={handleMicPress} />}
+
+                {/* 보내기는 자리를 늘 비워둔다 — 생겼다 사라지면 위의 마이크가 움직인다. */}
                 <View style={styles.sendSlot}>
-                  {micState !== 'blocked' && (
+                  {!isReading && (
                     <Button
                       label={isLastScene ? '마치기' : '보내기'}
                       // 디자인은 h42 지만 아이 손가락이 닿는 버튼이라 48(hitSize.min)인 lg 를 쓴다.
                       size="lg"
-                      disabled={reply === null}
+                      disabled={!canSend}
+                      loading={completeStep.isPending || enterStep.isPending}
                       style={styles.send}
                       onPress={handleSend}
                     />
                   )}
                 </View>
               </View>
+
+              {(recorder.isDenied || dictation.failure === 'denied') && (
+                <Text variant="captionSmall" color="danger" style={styles.micNotice}>
+                  마이크를 쓸 수 없어요. 설정에서 허용해주세요.
+                </Text>
+              )}
+              {dictation.failure !== null && dictation.failure !== 'denied' && (
+                <Text variant="captionSmall" color="textMuted" style={styles.micNotice}>
+                  {dictation.failure === 'network'
+                    ? '인터넷이 끊겨서 말을 글로 옮길 수 없어요.'
+                    : '이 기기에서는 말을 글로 옮길 수 없어요.'}
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -238,19 +556,47 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     gap: 13, // 디자인 실측
-    paddingLeft: 15, // 디자인 실측
-    paddingTop: spacing.md, // 디자인 실측(뒤로가기 아래 → 패널 위 y81)
+    paddingLeft: spacing['3xl'],
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['3xl'],
+    paddingBottom: spacing.xl,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  progress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  progressTrack: {
+    width: 120, // 디자인 실측
+    height: 8,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceMuted,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
   },
   narrationColumn: {
     flex: 457, // 디자인 실측
-    marginBottom: 19, // 디자인 실측 (왼쪽 패널만 바닥에서 떠 있다)
+    gap: spacing.xl,
   },
   sceneColumn: {
     flex: 539, // 디자인 실측
+    justifyContent: 'flex-end',
+    borderTopLeftRadius: radius.lg,
     overflow: 'hidden',
-    borderTopLeftRadius: spacing.xl,
   },
-  // 그림은 열을 꽉 채우고, 그 위에 대화와 마이크가 얹힌다.
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -259,58 +605,36 @@ const styles = StyleSheet.create({
     bottom: 0,
     opacity: BACKDROP_OPACITY,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.xl,
-    paddingHorizontal: spacing['3xl'], // 디자인 실측(24)
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2, // 디자인 실측
-    flexShrink: 1,
-  },
-  progress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  progressTrack: {
-    width: 140, // 디자인 실측
-    height: 6, // 디자인 실측
-    overflow: 'hidden',
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceMuted,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
+  // 그림 위에 겹쳐 놓는다. 실측: 그림(539×687) 기준 오른쪽 19 · 위 11.
+  wordPicker: {
+    position: 'absolute',
+    top: 11,
+    right: 19,
+    // 대화 말풍선이 이 자리로 올라와도 단어 상자가 위에 있어야 누를 수 있다.
+    zIndex: 1,
   },
   chat: {
-    gap: spacing.md,
-    marginTop: 47, // 디자인 실측 (오른쪽 열 위에서 47)
-    marginHorizontal: 21, // 디자인 실측 (대화 패널 497 = 539 - 21*2)
+    gap: spacing.lg,
+    padding: spacing.xl,
   },
-  // 미션 + 마이크. 남는 공간을 밀어내 항상 아래에 붙는다.
   bottomStack: {
     marginTop: 'auto',
     gap: spacing.md, // 디자인 실측 (미션 → 마이크 10)
-    marginBottom: 23, // 디자인 실측
-    marginHorizontal: 46, // 디자인 실측 (미션 패널 447 = 539 - 46*2)
+    paddingBottom: 23, // 디자인 실측
+    paddingHorizontal: spacing.xl,
   },
   micArea: {
     alignItems: 'center',
     gap: spacing.md,
   },
   sendSlot: {
-    height: hitSize.min, // 보내기 버튼(lg) 높이
+    height: 48, // Button size="lg" 높이. 버튼이 없을 때도 자리를 비워둔다.
     justifyContent: 'center',
   },
   send: {
-    width: 159, // 디자인 실측
-    // Button 의 기본값이 flex-start 라 부모의 alignItems 만으로는 가운데로 오지 않는다.
-    alignSelf: 'center',
+    paddingHorizontal: spacing['4xl'],
+  },
+  micNotice: {
+    textAlign: 'center',
   },
 });

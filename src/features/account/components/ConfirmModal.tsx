@@ -12,6 +12,8 @@ export interface ConfirmModalProps {
   tone?: 'default' | 'danger';
   confirmLabel: string;
   cancelLabel?: string;
+  /** 확인 버튼에 스피너를 띄우고 입력을 막는다. 서버를 기다리는 동안 쓴다. */
+  loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   /** 확인 버튼 위에 들어갈 추가 내용(삭제 항목 목록 등). */
@@ -32,6 +34,7 @@ export function ConfirmModal({
   tone = 'default',
   confirmLabel,
   cancelLabel = '취소',
+  loading = false,
   onConfirm,
   onCancel,
   children,
@@ -68,6 +71,9 @@ export function ConfirmModal({
           variant="secondary"
           size="lg"
           style={styles.action}
+          // 처리 중에 취소를 누르면 모달만 닫히고 요청은 계속 간다 — 되돌릴 수
+          // 없는 동작에서 그 상태는 위험하다. 끝날 때까지 막는다.
+          disabled={loading}
           onPress={onCancel}
         />
         <Button
@@ -75,6 +81,7 @@ export function ConfirmModal({
           variant={isDanger ? 'danger' : 'primary'}
           size="lg"
           style={styles.action}
+          loading={loading}
           onPress={onConfirm}
         />
       </View>

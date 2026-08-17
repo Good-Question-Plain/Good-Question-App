@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ImageStyle, type ViewStyle } from 'react-native';
 
 import { avatarTints, radius, type ColorToken } from '@/shared/theme';
 
@@ -12,6 +12,13 @@ export interface InitialBadgeProps {
   tintIndex?: number;
   /** 글자색. 대화 화면의 등장인물 뱃지처럼 진한 주황을 쓰는 곳이 있다. */
   color?: ColorToken;
+  /**
+   * 직접 올린 프로필 사진. **있으면 첫 글자 대신 이 사진을 그린다.**
+   *
+   * 사진을 올려둔 아이를 이름 글자로 덮으면 "내가 올린 사진이 어디 갔지"가 된다.
+   * 사진이 우선이고, 없을 때만 글자 뱃지로 떨어진다.
+   */
+  photoUrl?: string | null;
   style?: ViewStyle;
 }
 
@@ -26,18 +33,25 @@ export function InitialBadge({
   size = 40,
   tintIndex = 0,
   color = 'text',
+  photoUrl,
   style,
 }: InitialBadgeProps): React.JSX.Element {
   const tint = avatarTints[tintIndex % avatarTints.length];
+  const shape = { width: size, height: size, borderRadius: size / 2 };
+
+  if (photoUrl !== undefined && photoUrl !== null && photoUrl.length > 0) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        // 호출부가 넘기는 style 은 테두리·크기 정도라 그대로 쓸 수 있다.
+        style={[shape, style as ImageStyle]}
+        accessibilityIgnoresInvertColors
+      />
+    );
+  }
 
   return (
-    <View
-      style={[
-        styles.badge,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: tint },
-        style,
-      ]}
-    >
+    <View style={[styles.badge, shape, { backgroundColor: tint }, style]}>
       <Text variant={labelVariant(size)} color={color}>
         {name.slice(0, 1)}
       </Text>

@@ -8,8 +8,10 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthGate } from '@/features/auth';
 import { queryClient, startAuthTokenSync } from '@/shared/api';
 import { colors, fontAssets } from '@/shared/theme';
+import { VoiceInstallNotice } from '@/shared/ui';
 
 // RN 의 URL 구현이 완전하지 않아 supabase-js 가 내부에서 쓰는 URL 파싱이 깨진다.
 // 반드시 supabase 클라이언트를 만들기 전에 로드돼야 해서 최상단에 둔다.
@@ -48,12 +50,27 @@ export default function RootLayout(): React.JSX.Element | null {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          />
+          {/* 세션이 없으면 안쪽 화면(딥링크 포함)을 못 열게 막는다. */}
+          <AuthGate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            />
+          </AuthGate>
+
+          {/*
+            읽어주기 음성이 없으면 앱을 켠 직후 한 번 알린다.
+
+            `AuthGate` 의 children 이 아니라 **형제**라서 세션을 읽는 동안에도 살아 있다.
+
+            **다른 모달이 떠 있으면 그 뒤에 있다가, 그게 닫히면 보인다.** 안드로이드
+            `Modal` 은 나중에 열린 것이 위에 오는데, 로그인 직후에는 아이 선택 모달이
+            이 화면보다 뒤에 열리기 때문이다. 보호자가 아이를 고른 직후에 뜨는 셈이라
+            "기기를 쥐고 있는 사람에게 묻는다"는 목적에는 그대로 맞는다.
+          */}
+          <VoiceInstallNotice />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

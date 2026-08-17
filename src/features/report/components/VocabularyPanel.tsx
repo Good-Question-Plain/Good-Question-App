@@ -38,20 +38,25 @@ export function VocabularyPanel({
         단어장에서 더 자세히 볼 수 있어요
       </Text>
 
-      <View style={styles.group}>
-        <Text variant="captionStrong">자주 사용한 표현</Text>
-        <View style={styles.phrases}>
-          {vocabulary.phrases.map((phrase) => (
-            <Text key={phrase} variant="bodySmall">
-              {phrase}
-            </Text>
-          ))}
+      {/* 말버릇을 하나도 못 뽑았으면 제목만 남은 빈 블록이 되므로 통째로 뺀다. */}
+      {vocabulary.phrases.length > 0 && (
+        <View style={styles.group}>
+          <Text variant="captionStrong">자주 사용한 표현</Text>
+          <View style={styles.phrases}>
+            {vocabulary.phrases.map((phrase) => (
+              <Text key={phrase} variant="bodySmall">
+                {phrase}
+              </Text>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      <Text variant="captionSmall" color="textMuted">
-        {vocabulary.phraseNote}
-      </Text>
+      {vocabulary.phraseNote !== undefined && (
+        <Text variant="captionSmall" color="textMuted">
+          {vocabulary.phraseNote}
+        </Text>
+      )}
 
       <View style={styles.feedback}>
         <Text variant="captionStrong">어휘 피드백</Text>

@@ -7,6 +7,13 @@ import type { WordEntry } from '../model/types';
 
 export interface WordCardProps {
   entry: WordEntry;
+  /**
+   * 뱃지에 첫 글자를 쓸 아이 이름.
+   *
+   * 단어에 붙어 오지 않고 밖에서 받는다 — 서버 목록이 이미 `child_id` 로
+   * 걸러져 있어서 한 화면의 단어는 전부 같은 아이 것이기 때문이다.
+   */
+  childName: string;
   onToggleSave?: () => void;
   onPress?: () => void;
   style?: ViewStyle;
@@ -21,11 +28,12 @@ export interface WordCardProps {
  */
 export function WordCard({
   entry,
+  childName,
   onToggleSave,
   onPress,
   style,
 }: WordCardProps): React.JSX.Element {
-  const { word, storyTitle, childName, saved } = entry;
+  const { word, storyTitle, saved } = entry;
   const HeartIcon = saved ? HeartFillIcon : HeartLineIcon;
 
   return (
@@ -51,6 +59,7 @@ export function WordCard({
           <View style={styles.childBadge}>
             <Text variant="badge">{childName.slice(0, 1)}</Text>
           </View>
+          {/* 이름을 아직 못 받았으면 뱃지는 빈 원으로 남는다 — 자리는 유지된다. */}
           <Text variant="caption" color="textMuted" numberOfLines={1} style={styles.storyTitle}>
             {storyTitle}
           </Text>

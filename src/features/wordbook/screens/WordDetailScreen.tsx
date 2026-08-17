@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import * as Speech from 'expo-speech';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { colors, hitSlopFor, radius, spacing } from '@/shared/theme';
@@ -14,7 +14,12 @@ import {
   Text,
 } from '@/shared/ui';
 
-import { findWord } from '../model/types';
+import { useToggleWordSaved, useWordDetail } from '../api/queries';
+
+export interface WordDetailScreenProps {
+  /** `GET /vocabulary/{id}` 가 `child_id` 를 필수로 받는다. 라우트가 넘긴다. */
+  childId: string;
+}
 
 /**
  * 단어 상세 (Figma 118:174).
@@ -23,11 +28,12 @@ import { findWord } from '../model/types';
  * 단어를 크게(32) 놓고 듣기 버튼을 바로 옆에 둔다.
  * 설명은 "뜻 → 언제 쓰는지 → 이야기에서 어떻게 나왔는지" 순으로 좁혀간다.
  */
-export function WordDetailScreen(): React.JSX.Element {
+export function WordDetailScreen({ childId }: WordDetailScreenProps): React.JSX.Element {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const entry = findWord(id);
-  const [saved, setSaved] = useState(entry?.saved ?? false);
+  const { data: entry, isLoading } = useWordDetail(childId, id ?? '');
+  const toggleSaved = useToggleWordSaved(childId);
+  const saved = entry?.saved ?? false;
 
   const backButton = (
     <Appear>
@@ -52,7 +58,11 @@ export function WordDetailScreen(): React.JSX.Element {
       <Screen>
         <View style={styles.page}>
           {backButton}
-          <EmptyState title="단어를 찾을 수 없어요" description="저장이 지워졌을 수 있어요" />
+          {/* 받아오는 중에는 "없어요"를 띄우지 않는다 — 잠깐 떴다 사라지면
+              지워진 줄 안다. 자리만 비워 두고 기다린다. */}
+          {!isLoading && (
+            <EmptyState title="단어를 찾을 수 없어요" description="저장이 지워졌을 수 있어요" />
+          )}
         </View>
       </Screen>
     );
@@ -76,8 +86,14 @@ export function WordDetailScreen(): React.JSX.Element {
                 scaleTo={0.88}
                 hitSlop={hitSlopFor(ROUND_BUTTON_SIZE)}
                 style={[styles.roundButton, styles.speakerButton]}
+                /**
+                 * 단어를 소리 내어 읽어준다. **TTS 는 앱이 맡는다.**
+                 * 서버가 `audio_url` 을 줄 때는 그 녹음을 재생하는 게 맞지만,
+                 * 지금은 값이 비어 오므로 기기 음성으로 읽는다.
+                 */
                 onPress={() => {
-                  // TODO: TTS 재생 연결
+                  Speech.stop();
+                  Speech.speak(entry.word, { language: 'ko-KR', rate: 0.9 });
                 }}
               >
                 <SpeakerIcon width={18} height={18} color={colors.textInverse} />
@@ -90,7 +106,7 @@ export function WordDetailScreen(): React.JSX.Element {
                 scaleTo={0.88}
                 hitSlop={hitSlopFor(ROUND_BUTTON_SIZE)}
                 style={[styles.roundButton, styles.saveButton]}
-                onPress={() => setSaved((prev) => !prev)}
+                onPress={() => toggleSaved.mutate({ vocabId: entry.id, saved: !saved })}
               >
                 <HeartDetailIcon
                   width={18}

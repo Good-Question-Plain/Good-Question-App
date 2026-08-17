@@ -27,7 +27,28 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "아이 프로필 사진을 고르기 위해 사진 접근이 필요해요.",
+          "cameraPermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "아이가 이야기 속 인물과 말하려면 마이크가 필요해요."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "아이가 이야기를 다시 말하려면 마이크가 필요해요.",
+          "speechRecognitionPermission": "아이가 말한 이야기를 글로 옮기려면 음성 인식이 필요해요.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

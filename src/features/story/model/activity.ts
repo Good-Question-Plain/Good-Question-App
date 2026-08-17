@@ -1,67 +1,31 @@
 import type { FC } from 'react';
 import type { SvgProps } from 'react-native-svg';
 
-import BrickHouse from '@assets/cards/brick-house.svg';
-import StrawHouse from '@assets/cards/straw-house.svg';
-import Together from '@assets/cards/together.svg';
-import Wolf from '@assets/cards/wolf.svg';
-import WoodHouse from '@assets/cards/wood-house.svg';
-
-/** 이야기를 마친 뒤 되짚어보는 활동에 쓰는 장면 카드. */
+/**
+ * 이야기를 마친 뒤 되짚어보는 활동에 쓰는 장면 카드.
+ *
+ * 서버(`GET /sessions/{id}/post-activity`)가 주는 카드를 화면 모양으로 옮긴 것이다.
+ * 그림은 **둘 중 하나**로 온다 — 서버가 주는 `imageUrl`, 또는 디자인에서 내보낸
+ * 번들 `Icon`. 서버가 그림을 안 주는 이야기도 있어서 둘 다 받는다.
+ */
 export interface StoryCard {
+  /** 서버의 `scene_id`. 순서를 제출할 때 이 값을 보낸다. */
   id: string;
   label: string;
-  Icon: FC<SvgProps>;
+  Icon?: FC<SvgProps>;
+  imageUrl?: string;
 }
 
-export interface StoryActivity {
-  storyId: string;
-  /** **정답 순서대로** 담는다. 화면에 보여줄 때는 `shuffledIds` 순서를 쓴다. */
-  cards: readonly StoryCard[];
-  /** 처음 깔아주는 순서. 디자인(92:993)의 배열을 그대로 옮겼다. */
-  shuffledIds: readonly string[];
-  /** 이야기에서 건진 낱말. 단어장으로 이어질 값이다. */
-  keywords: readonly string[];
-  /**
-   * 아이가 이야기를 다시 말했다고 가정할 문장 (활동 2/2).
-   *
-   * TODO: STT 가 붙으면 사라진다. 지금은 마이크를 누르면 이게 대신 적힌다.
-   */
-  retellSample: string;
-}
-
-const PIGS_ACTIVITY: StoryActivity = {
-  storyId: '3',
-  cards: [
-    { id: 'straw', label: '가벼운 지푸라기집', Icon: StrawHouse },
-    { id: 'wood', label: '나무로 만든 집', Icon: WoodHouse },
-    { id: 'brick', label: '튼튼한 벽돌집', Icon: BrickHouse },
-    { id: 'wolf', label: '늑대가 찾아왔어요', Icon: Wolf },
-    { id: 'together', label: '셋이 함께 안전해요', Icon: Together },
-  ],
-  shuffledIds: ['wolf', 'brick', 'straw', 'together', 'wood'],
-  keywords: ['용감한', '친구', '숲', '모험'],
-  retellSample:
-    '옛날 옛적에 아기 돼지 삼형제가 살았어요. 지푸라기집이랑 나무집은 늑대가 후 불어서 무너졌는데, 벽돌집은 튼튼해서 안 무너졌어요. 그래서 삼형제가 다 같이 안전하게 지냈어요.',
-};
-
-const ACTIVITIES: readonly StoryActivity[] = [PIGS_ACTIVITY];
-
-export function findActivity(storyId: string): StoryActivity | undefined {
-  return ACTIVITIES.find((activity) => activity.storyId === storyId);
-}
-
-/** 화면에 깔아줄 순서대로 카드를 돌려준다. */
-export function shuffledCards(activity: StoryActivity): readonly StoryCard[] {
-  return activity.shuffledIds
-    .map((id) => activity.cards.find((card) => card.id === id))
-    .filter((card): card is StoryCard => card !== undefined);
-}
-
-/** 아이가 고른 순서가 정답인지. */
-export function isCorrectOrder(activity: StoryActivity, pickedIds: readonly string[]): boolean {
-  return (
-    pickedIds.length === activity.cards.length &&
-    pickedIds.every((id, index) => activity.cards[index]?.id === id)
-  );
-}
+/**
+ * 핵심 단어를 라우트 파라미터로 넘길 때 쓰는 구분자.
+ *
+ * 서버는 이 낱말들을 순서 맞추기 `submit` 응답에서 **한 번만** 준다. 다시 받아올
+ * 엔드포인트가 없어서 다시 말하기 화면으로 넘기려면 라우트 파라미터밖에 없다.
+ * U+001F(unit separator)는 낱말에 들어갈 수 없는 문자라 쉼표와 달리 섞일 걱정이 없다.
+ *
+ * **넘기는 쪽(`StoryActivityScreen`)과 받는 쪽(`StoryRetellScreen`)이 같은 값을 써야
+ * 한다.** 한쪽만 달라지면 낱말이 글자 단위로 쪼개져 칩이 낱자로 뜬다 (실제로 그렇게
+ * 어긋나 있었다). 화면에 리터럴로 흩어 두면 **눈에 안 보이는 문자라 어긋난 걸
+ * 알아챌 수 없어서** 한 곳에 모으고, 코드에서도 보이도록 코드포인트로 적는다.
+ */
+export const KEYWORD_SEPARATOR = String.fromCharCode(0x1f);

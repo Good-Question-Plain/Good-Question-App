@@ -6,6 +6,12 @@ export { BottomTabBar, TABS, type BottomTabBarProps, type TabKey } from './Botto
 export { Button, type ButtonProps } from './Button';
 export { Card, type CardProps } from './Card';
 export { ChildSwitcher, type ChildSwitcherOption, type ChildSwitcherProps } from './ChildSwitcher';
+export { VoiceInstallNotice } from './VoiceInstallNotice';
+export {
+  ChildProfileModal,
+  type ChildProfileModalProps,
+  type ChildProfileSummary,
+} from './ChildProfileModal';
 export { Chip, type ChipProps } from './Chip';
 export { ComingSoon, type ComingSoonProps } from './ComingSoon';
 export { Divider, type DividerProps } from './Divider';
@@ -17,10 +23,13 @@ export {
   ArrowLeftIcon,
   CameraIcon,
   CelebrateIcon,
+  CheckboxCheckedIcon,
+  CheckboxIcon,
   CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  CloseIcon,
   GuideFaceIcon,
   HeartDetailIcon,
   HeartFillIcon,

@@ -13,9 +13,10 @@ import {
   Text,
 } from '@/shared/ui';
 
+import { useToggleWordSaved, useWords } from '../api/queries';
 import { StoryWordGroup } from '../components/StoryWordGroup';
 import { WordCard } from '../components/WordCard';
-import { groupByStory, MOCK_WORDS, type WordEntry } from '../model/types';
+import { groupByStory, type WordEntry } from '../model/types';
 
 const FILTERS = ['전체', '이야기별'] as const;
 type Filter = (typeof FILTERS)[number];
@@ -32,26 +33,46 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
   return rows;
 }
 
+export interface WordbookScreenProps {
+  /** 단어장은 아이별이다. `GET /vocabulary` 가 `child_id` 를 필수로 받는다. */
+  childId: string;
+  /** 카드 뱃지에 쓸 이름. 목록이 이미 이 아이 것으로 걸러져 있다. */
+  childName: string;
+  /**
+   * 서버 목록이 비었을 때 대신 보여줄 단어들.
+   *
+   * 서버가 아이 발화를 못 받아서(인수인계 1-1) 단어장이 늘 비어 있다. 이야기에서
+   * 고른 낱말을 앱이 기억해뒀다가 라우트가 넘겨준다. **서버가 하나라도 주면
+   * 서버 것이 이긴다.**
+   */
+  fallbackWords?: readonly WordEntry[];
+}
+
 /**
  * 단어장 (Figma 118:45 / 181:864).
  *
  * 아이가 이야기 중 모르는 단어로 저장해둔 것들을 모아 보여준다.
  * '이야기별'은 같은 이야기에서 나온 단어를 묶어 보여주는 필터다.
+ *
+ * wordbook 은 child 를 모른다 — 어느 아이인지는 라우트가 넘긴다.
  */
-export function WordbookScreen(): React.JSX.Element {
+export function WordbookScreen({
+  childId,
+  childName,
+  fallbackWords,
+}: WordbookScreenProps): React.JSX.Element {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('전체');
-  const [words, setWords] = useState<readonly WordEntry[]>(MOCK_WORDS);
+  const { data, isLoading, isError } = useWords(childId);
+  const toggleSaved = useToggleWordSaved(childId);
 
-  const toggleSave = (id: string): void => {
-    setWords((prev) =>
-      prev.map((entry) => (entry.id === id ? { ...entry, saved: !entry.saved } : entry)),
-    );
-  };
-
+  const serverWords = data ?? [];
+  const words = serverWords.length > 0 ? serverWords : (fallbackWords ?? []);
   const groups = groupByStory(words);
   const rows = chunk(words, COLUMNS);
-  const isEmpty = words.length === 0;
+  // 로딩 중에는 빈 상태 문구를 띄우지 않는다 — "저장한 단어가 없어요"가 잠깐
+  // 떴다 사라지면 아이가 방금 저장한 단어가 지워진 줄 안다.
+  const isEmpty = !isLoading && !isError && words.length === 0;
 
   const openDetail = (id: string): void => {
     router.push({ pathname: '/word/[id]', params: { id } });
@@ -78,7 +99,12 @@ export function WordbookScreen(): React.JSX.Element {
           <SegmentedTabs items={FILTERS} value={filter} onChange={setFilter} />
         </Appear>
 
-        {isEmpty ? (
+        {isError ? (
+          <EmptyState
+            title="단어장을 불러오지 못했어요"
+            description="연결 상태를 확인하고 다시 시도해주세요"
+          />
+        ) : isEmpty ? (
           <EmptyState
             title="아직 저장한 단어가 없어요"
             description="이야기를 하면서 모르는 단어를 저장해봐요"
@@ -93,7 +119,10 @@ export function WordbookScreen(): React.JSX.Element {
                       <WordCard
                         key={entry.id}
                         entry={entry}
-                        onToggleSave={() => toggleSave(entry.id)}
+                        childName={childName}
+                        onToggleSave={() =>
+                          toggleSaved.mutate({ vocabId: entry.id, saved: !entry.saved })
+                        }
                         onPress={() => openDetail(entry.id)}
                         style={styles.cell}
                       />

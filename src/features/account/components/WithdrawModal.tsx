@@ -7,6 +7,8 @@ import { ConfirmModal } from './ConfirmModal';
 
 export interface WithdrawModalProps {
   visible: boolean;
+  /** 탈퇴 요청을 기다리는 중. 되돌릴 수 없는 동작이라 그동안 버튼을 막는다. */
+  loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,6 +24,7 @@ const DELETED_ITEMS = ['아이 학습 기록', '저장한 단어장', '학습 �
  */
 export function WithdrawModal({
   visible,
+  loading = false,
   onConfirm,
   onCancel,
 }: WithdrawModalProps): React.JSX.Element {
@@ -32,6 +35,7 @@ export function WithdrawModal({
       title="정말 탈퇴하시겠어요?"
       description="탈퇴하면 아래 정보가 삭제돼요"
       confirmLabel="탈퇴하기"
+      loading={loading}
       onConfirm={onConfirm}
       onCancel={onCancel}
     >
