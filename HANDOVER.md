@@ -1438,7 +1438,65 @@ POST /progress/{story_id}/steps/{n+1}        → 다음 장면 진입
 
 ---
 
-# 10. 실기기 태블릿 (SM-T510) — 함정 모음
+# 10. 릴리스 APK (2026-08-17)
+
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+`com.goodquestion.app` **1.0.0**(versionCode 1) · minSdk 24 / targetSdk 36 · 113MB.
+ABI 는 armeabi-v7a 포함 4종이라 **SM-T510 에 그대로 들어간다**. 빌드 53분.
+
+```bash
+cd android && ./gradlew assembleRelease
+```
+
+> `expo run:android` 가 gradle 앞에서 멈추는 일이 있어(11장) gradle 을 직접 부른다.
+> **Metro 를 띄운 채로 돌려도 이번엔 죽지 않았다.**
+
+## 환경변수는 APK 안에 박힌다 — 기기에 설정할 것 없음
+
+`EXPO_PUBLIC_*` 는 빌드 시점에 JS 번들로 치환된다. 실제로 번들을 열어 확인했다.
+
+| 키 | 번들에 들어감 |
+| --- | --- |
+| `EXPO_PUBLIC_API_BASE_URL` | 예 (`https://gq.heijionline.com`) |
+| `EXPO_PUBLIC_SUPABASE_URL` | 예 |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | 예 |
+
+**`adb reverse` 도 필요 없다** — 실서버를 보므로 PC 와 끊겨도 혼자 돈다.
+`.env` 없이 빌드하면 세 값이 빈 문자열로 박히므로 **빌드 전에 `.env` 를 확인한다.**
+
+## ⚠️ 디버그 키스토어로 서명된다
+
+Expo 기본 `build.gradle` 이 `release` 에도 `signingConfigs.debug` 를 쓴다.
+
+```
+Signer #1 certificate DN: CN=Android Debug, OU=Android, O=Unknown ...
+```
+
+시연·내부 배포는 되지만 **스토어 업로드는 안 된다.** 올리려면 키스토어를 만들어
+`android/app/build.gradle` 의 release signingConfig 를 바꾼다.
+
+## 설치하면 개발용 앱이 덮인다
+
+패키지명이 dev client 와 같다. `adb install -r` 로 덮어썼고, 다시 개발하려면
+`npx expo run:android` 로 dev client 를 새로 설치해야 한다.
+
+**설치 후 확인**: 로그인 세션 유지 · 아이 목록 · 이야기 목록/썸네일 · 이야기 세션
+1/9 진입 · 모르는 단어 목록까지 뜨고 `[API]` 오류 없음.
+
+## 기기 쪽에서 사람이 해야 하는 것
+
+| | |
+| --- | --- |
+| **한국어 TTS 음성** | 앱이 켤 때 안내한다(3-10). 설치해야 읽어주기가 된다 |
+| 마이크·음성 인식 권한 | 처음 마이크를 누를 때 시스템이 묻는다 |
+| 인터넷 | STT 가 네트워크 인식이라 필수다 |
+
+---
+
+# 11. 실기기 태블릿 (SM-T510) — 함정 모음
 
 **이 태블릿은 armeabi-v7a(32비트)다.** 에뮬레이터용 x86_64 APK 는 안 들어간다.
 
@@ -1474,7 +1532,7 @@ adb shell am start -a android.intent.action.VIEW \
 
 ---
 
-# 11. 검증 방법
+# 12. 검증 방법
 
 1. `npm run typecheck && npm run lint`
 2. 실기기에 올려 실제로 눌러본다
@@ -1488,7 +1546,7 @@ adb shell am start -a android.intent.action.VIEW \
 
 ---
 
-# 12. 아직 TODO
+# 13. 아직 TODO
 
 > 구현 안 된 것 목록은 [2-3](#2-3-아직-구현-안-된-것) 에도 있다. 여기는 그 외의 것들이다.
 
@@ -1503,7 +1561,7 @@ adb shell am start -a android.intent.action.VIEW \
 
 ---
 
-# 13. 테스트 계정
+# 14. 테스트 계정
 
 ```
 abccba111307@gmail.com / goodq1234   (Supabase 에 실제로 존재한다)
